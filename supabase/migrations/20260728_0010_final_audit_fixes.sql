@@ -109,7 +109,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.add_advance_order_event(uuid, text, text, text) TO authenticated, anon, public;
 
 -- 7. Ensure profiles RLS allows staff to update their own profile (avatar etc)
-CREATE POLICY IF NOT EXISTS "Users can update own profile"
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id);
 

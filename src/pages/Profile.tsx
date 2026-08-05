@@ -110,7 +110,7 @@ export default function Profile() {
     const trimName  = editName.trim()
     const trimPhone = editPhone.replace(/\D/g, '')
     if (!trimName || trimName.length < 2) { setSaveErr('Name must be at least 2 characters.'); return }
-    if (trimPhone && !isValidPhone(trimPhone)) { setSaveErr('Enter a valid Malaysian mobile number.'); return }
+    if (trimPhone && !isValidPhone(trimPhone)) { setSaveErr('Enter a valid Indian mobile number.'); return }
     if (!user) return
 
     setSaving(true); setSaveErr('')
@@ -374,7 +374,7 @@ export default function Profile() {
                           className="flex-1 px-4 py-3 rounded-xl border-2 border-sand focus:border-sageDark outline-none text-[13px]"
                           value={editPhone}
                           onChange={e => { setEditPhone(e.target.value.replace(/\D/g, '')); setSaveErr('') }}
-                          placeholder="0123456789"
+                          placeholder="9876543210"
                         />
                       </div>
                     </div>

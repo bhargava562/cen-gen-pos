@@ -1384,7 +1384,7 @@ export default function Dashboard() {
         <div className={`hidden lg:flex items-center relative transition-all duration-300 ${sidebarCollapsed ? 'flex-col items-center pt-5 pb-4 px-2 gap-3' : 'px-5 py-5 justify-between'}`}>
           <Link to="/pos" title="Go to Billing Panel" className={`flex items-center gap-3 min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'justify-center' : 'flex-1'}`}>
             <div className="flex items-center justify-center shrink-0 w-11 h-11 rounded-xl bg-white border border-emerald-900/40 shadow-sm overflow-hidden p-1 hover:scale-105 transition-transform">
-              <img src="/sreejas-bridal-botique-logo.jpeg" alt="Sreeja's Bridal Boutique logo" className="w-full h-full object-contain" />
+              <img src="/sreeja-bridal-boutique-logo.jpeg" alt="Sreeja's Bridal Boutique logo" className="w-full h-full object-contain" />
             </div>
             {!sidebarCollapsed && (
               <h1 className="text-[20px] font-black text-white truncate tracking-tight">Sreeja's Bridal Boutique</h1>
@@ -1404,7 +1404,7 @@ export default function Dashboard() {
         <div className="flex lg:hidden items-center justify-between px-4 py-4 border-b border-white/10">
           <Link to="/pos" title="Go to Billing Panel" className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-emerald-900/40 shrink-0 overflow-hidden shadow-sm p-1 hover:scale-105 transition-transform">
-              <img src="/sreejas-bridal-botique-logo.jpeg" alt="Sreeja's Bridal Boutique logo" className="w-full h-full object-contain" />
+              <img src="/sreeja-bridal-boutique-logo.jpeg" alt="Sreeja's Bridal Boutique logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-[16px] font-black text-white truncate">Sreeja's Bridal Boutique</span>
           </Link>
@@ -2965,7 +2965,7 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Barcode', 'பார்கோடு')}</label>
                     <input className="w-full px-4 py-2.5 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-maroon-dark rounded-xl text-[13px] font-bold outline-none transition-colors"
-                      placeholder="e.g. 8901234567890" value={prodForm.barcode} onChange={e => setProdForm(f => ({...f, barcode: e.target.value}))} />
+                      placeholder="e.g. 8998765432100" value={prodForm.barcode} onChange={e => setProdForm(f => ({...f, barcode: e.target.value}))} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Stock', 'இருப்பு')} *</label>

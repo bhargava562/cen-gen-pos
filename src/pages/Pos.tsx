@@ -484,7 +484,7 @@ export default function Pos(props: PosProps = {}) {
     if (!items.length) { setError('Add at least one product.'); return }
     // Validate required phone
     const normalizedPhone = normalizePhone(customer.phone || '')
-    if (!normalizedPhone) { setError('Please enter a valid Malaysian mobile number (e.g. 0123456789 or +60 0123456789)'); return }
+    if (!normalizedPhone) { setError('Please enter a valid Indian mobile number (e.g. 9876543210 or +91 9876543210)'); return }
     // Validate payment amount (only required for cash)
     if (paymentType === 'cash' && !cashReceived.trim()) { setError('Enter the amount received from customer'); return }
     if (paymentType === 'cash' && cashReceivedNum < total) { setError(`Insufficient payment. Customer still owes ${formatCurrency(total - cashReceivedNum)}`); return }

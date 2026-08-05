@@ -26,7 +26,7 @@ function validate(name: string, phone: string, email: string): FieldError {
   if (!name.trim() || name.trim().length < 2)
     errs.name = 'Please enter your full name (at least 2 characters).'
   if (!isValidPhone(phone))
-    errs.phone = 'Enter a valid Malaysian mobile number (e.g. 0123456789 or +60 0123456789).'
+    errs.phone = 'Enter a valid Indian mobile number (e.g. 9876543210 or +91 9876543210).'
   if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
     errs.email = 'Enter a valid email address.'
   return errs
@@ -68,7 +68,7 @@ export default function Login() {
     if (Object.keys(rawErrs).length > 0) {
       setFieldErrs({
         name:  rawErrs.name  ? l('Please enter your full name (at least 2 characters).', 'உங்கள் முழு பெயரை உள்ளிடவும் (குறைந்தது 2 எழுத்துக்கள்).') : undefined,
-        phone: rawErrs.phone ? l('Enter a valid Malaysian mobile number (e.g. 0123456789).', 'சரியான இந்திய மொபைல் எண் உள்ளிடவும்.') : undefined,
+        phone: rawErrs.phone ? l('Enter a valid Indian mobile number (e.g. 9876543210).', 'சரியான இந்திய மொபைல் எண் உள்ளிடவும்.') : undefined,
         email: rawErrs.email ? l('Enter a valid email address.', 'சரியான மின்னஞ்சல் உள்ளிடவும்.') : undefined,
       })
       return
@@ -140,7 +140,7 @@ export default function Login() {
                 </span>
                 <input
                   type="tel" autoComplete="tel-national"
-                  placeholder="0123456789 or +60 0123456789"
+                  placeholder="9876543210 or +91 9876543210"
                   className={`flex-1 ${inputCls(!!fieldErrs.phone)}`}
                   value={phone}
                   onChange={e => { setPhone(e.target.value); setFieldErrs(f => ({ ...f, phone: '' })) }}
