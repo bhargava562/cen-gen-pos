@@ -76,22 +76,23 @@ export const isUuid = (value: unknown): value is string =>
 
 export const formatInvoiceNo = (invNo: unknown): string => {
   const raw = String(invNo || '').trim()
-  if (!raw) return '10000001'
-  if (/^\d{8}$/.test(raw)) return raw
+  const base = raw.replace(/^INV/i, '')
+  if (!base) return 'INV10000001'
+  if (/^\d{8}$/.test(base)) return `INV${base}`
 
-  const matchDigits = raw.match(/\d+/g)
+  const matchDigits = base.match(/\d+/g)
   if (matchDigits) {
     const joined = matchDigits.join('')
-    if (joined.length >= 8) return joined.slice(-8)
-    return joined.padStart(8, '0')
+    if (joined.length >= 8) return `INV${joined.slice(-8)}`
+    return `INV${joined.padStart(8, '0')}`
   }
 
   let hash = 0
-  for (let i = 0; i < raw.length; i++) {
-    hash = (hash << 5) - hash + raw.charCodeAt(i)
+  for (let i = 0; i < base.length; i++) {
+    hash = (hash << 5) - hash + base.charCodeAt(i)
     hash |= 0
   }
-  return String(Math.abs(hash) % 89999999 + 10000000)
+  return `INV${String(Math.abs(hash) % 89999999 + 10000000)}`
 }
 
 
