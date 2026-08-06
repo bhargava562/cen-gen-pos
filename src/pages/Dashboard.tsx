@@ -39,7 +39,7 @@ import { debounce } from '../lib/debounce'
 import { useAuthStore, useProductStore, useAdminAuthStore, type Product } from '../store/store'
 import { uploadProductImage } from '../lib/storage'
 import { formatCurrency, normalizeOrderMode, normalizeUnitType, toNumber, type UnitType } from '../lib/retail'
-import { normalizeStructuredOrderItem } from '../lib/retail'
+import { normalizeStructuredOrderItem, formatInvoiceNo } from '../lib/retail'
 import { Invoice } from '../components/Invoice'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import { buildProfessionalWhatsAppMessage } from '../lib/whatsappMessage'
@@ -315,7 +315,7 @@ export default function Dashboard() {
     }
     setOrders(current => [completed, ...current.filter(order => order.id !== completed.id)])
     setSearchResults(current => [completed, ...current.filter(order => order.id !== completed.id)].slice(0, 100))
-    setOrderItems(current => [...completedItems.map(item => ({ order_id: completed.id, product_name: String(item.name || 'Product'), category: String(item.category || advance.category || ''), quantity: Number(item.quantity || 1), line_total: Number(item.line_total || 0), is_manual: false })), ...current.filter(row => row.order_id !== completed.id)])
+    setOrderItems(current => [...completedItems.map(item => ({ order_id: completed.id, product_name: String(item.name || 'Product'), category: String(item.category || advance.category || ''), quantity: Number(item.quantity || 1), line_total: Number(item.line_total || 0), is_manual: false }), ...current.filter(row => row.order_id !== completed.id)])
   }, [user?.id])
 
   // Analytics (date-aware)
@@ -803,7 +803,7 @@ export default function Dashboard() {
     const message = buildProfessionalWhatsAppMessage({
       customerName: order.customer_name,
       phone: order.phone,
-      invoiceNumber: order.invoice_no || order.id,
+      invoiceNumber: formatInvoiceNo(order.invoice_no || order.id),
       invoiceDate: order.created_at,
       items: items.map(item => ({
         name: item.name,
@@ -812,13 +812,13 @@ export default function Dashboard() {
         unitType: item.unit_type,
         rate: item.base_price,
         lineTotal: item.line_total,
-      })),
+      }),
       subtotal,
       couponDiscount: order.discount_amount,
       shipping: order.delivery_charge,
       total: order.total,
     })
-    return { items, subtotal, message, fileName: `Invoice-${order.invoice_no || order.id}.pdf` }
+    return { items, subtotal, message, fileName: `Invoice-${formatInvoiceNo(order.invoice_no || order.id)}.pdf` }
   }
 
 
@@ -828,7 +828,7 @@ export default function Dashboard() {
     const subtotal = order.total - (order.delivery_charge || 0) + (order.discount_amount || 0)
 
     printThermalReceipt({
-      invoiceNo: order.invoice_no || order.id,
+      invoiceNo: formatInvoiceNo(order.invoice_no || order.id),
       date: order.created_at,
       customerName: order.customer_name,
       phone: order.phone,
@@ -847,7 +847,7 @@ export default function Dashboard() {
         unit: item.unit || '',
         price: item.price || item.base_price || 0,
         line_total: item.line_total || 0
-      })),
+      }),
       subtotal,
       shipping: order.delivery_charge || 0,
       couponDiscount: order.discount_amount || 0,
@@ -865,7 +865,7 @@ export default function Dashboard() {
     if (order.invoice_pdf_url) {
       const link = document.createElement('a')
       link.href = order.invoice_pdf_url
-      if (mode === 'download') link.download = `Invoice-${order.invoice_no || order.id}.pdf`
+      if (mode === 'download') link.download = `Invoice-${formatInvoiceNo(order.invoice_no || order.id)}.pdf`
       if (mode === 'download') { link.click(); return }
       const opened = window.open(order.invoice_pdf_url, '_blank', 'noopener,noreferrer')
       if (mode === 'print') opened?.addEventListener('load', () => opened.print())
@@ -874,7 +874,7 @@ export default function Dashboard() {
     const preview = getOrderWhatsAppPreview(order)
     if (!preview) { alert('This order has no invoice details available.'); return }
     const file = invoicePdfFile({
-      invoiceNo: order.invoice_no || order.id,
+      invoiceNo: formatInvoiceNo(order.invoice_no || order.id),
       date: order.created_at,
       customerName: order.customer_name,
       phone: order.phone,
@@ -1101,7 +1101,7 @@ export default function Dashboard() {
         unit_type: unitType, unit_label: prodForm.unitLabel,
         base_quantity: toNumber(prodForm.baseQuantity, 1),
         stock_quantity: toNumber(prodForm.stockQuantity, 0),
-        stock: Math.floor(toNumber(prodForm.stockQuantity, 0)),
+        stock: Math.floor(toNumber(prodForm.stockQuantity, 0),
         allow_decimal_quantity: prodForm.allowDecimalQuantity,
         predefined_options: predefined_options.length > 0 ? predefined_options : [],
         is_active: prodForm.isActive, sort_order: toNumber(prodForm.sortOrder, 0),
@@ -1542,7 +1542,7 @@ export default function Dashboard() {
                         const btClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-purple-100 text-purple-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                         return (
                           <tr key={o.id} className="hover:bg-[#F9FAFB]/50">
-                            <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{o.invoice_no || '-'}</td>
+                            <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
                             <td className="px-3 py-2.5 font-semibold text-[#111111] max-w-[100px] truncate">{o.customer_name}</td>
                             <td className="px-3 py-2.5 font-black text-[#111111]">{formatCurrency(getOrderTotal(o))}</td>
                             <td className="px-3 py-2.5 text-[#7A846F] whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
@@ -1663,7 +1663,7 @@ export default function Dashboard() {
                     <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center">
                       <span className="text-[13px] font-bold text-[#374151]">Discounts Applied</span>
                       <span className="text-[16px] font-black text-[#10B981]">
-                        {formatCurrency(searchResults.reduce((acc, o) => acc + (toNumber(o.discount_amount, 0)), 0))}
+                        {formatCurrency(searchResults.reduce((acc, o) => acc + (toNumber(o.discount_amount, 0), 0))}
                       </span>
                     </div>
                   </div>
@@ -1766,7 +1766,7 @@ export default function Dashboard() {
                         const waMsg = buildProfessionalWhatsAppMessage({
                           customerName: order.customer_name,
                           phone: order.phone,
-                          invoiceNumber: order.invoice_no || order.id || '-',
+                          invoiceNumber: formatInvoiceNo(order.invoice_no || order.id),
                           invoiceDate: order.created_at,
                           items: normalizedItems.map(item => ({
                             name: item.name,
@@ -1775,7 +1775,7 @@ export default function Dashboard() {
                             unitType: item.unit_type,
                             rate: item.base_price,
                             lineTotal: item.line_total,
-                          })),
+                          }),
                           subtotal: normalizedItems.reduce((sum, item) => sum + item.line_total, 0),
                           total: getOrderTotal(order),
                           paymentMode: order.payment_mode || order.payment_method,
@@ -2216,7 +2216,7 @@ export default function Dashboard() {
                   {[
                     { label: "TODAY'S REVENUE", value: formatCurrency(analytics.todaySales), icon: <RMIcon size={20} className="text-emerald-700" />, bg: 'bg-emerald-50', border: 'border-emerald-100' },
                     { label: "COMPLETED ORDERS", value: String(analytics.todayCompletedOrdersCount), icon: <ShoppingCart size={20} className="text-blue-700" />, bg: 'bg-blue-50', border: 'border-blue-100' },
-                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold)), icon: <Package size={20} className="text-purple-700" />, bg: 'bg-purple-50', border: 'border-purple-100' },
+                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold), icon: <Package size={20} className="text-purple-700" />, bg: 'bg-purple-50', border: 'border-purple-100' },
                     { label: "AVG ORDER VALUE", value: formatCurrency(analytics.todayAvgOrderValue), icon: <Trophy size={20} className="text-amber-700" />, bg: 'bg-amber-50', border: 'border-amber-100' },
                   ].map((card, i) => (
                     <div key={i} className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between gap-4">
@@ -2286,7 +2286,7 @@ export default function Dashboard() {
                             const btClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-purple-100 text-purple-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                             return (
                               <tr key={o.id} className="hover:bg-[#F9FAFB]/50">
-                                <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{o.invoice_no || '-'}</td>
+                                <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
                                 <td className="px-3 py-2.5 font-semibold text-[#111111] max-w-[100px] truncate">{o.customer_name}</td>
                                 <td className="px-3 py-2.5 font-black text-[#111111]">{formatCurrency(getOrderTotal(o))}</td>
                                 <td className="px-3 py-2.5 text-[#374151] whitespace-nowrap">{new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</td>
@@ -2316,7 +2316,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Product Revenue', value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={18} />, from: 'from-emerald-500 to-teal-600' },
-                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold)), icon: <Package size={18} />, from: 'from-blue-500 to-indigo-600' },
+                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold), icon: <Package size={18} />, from: 'from-blue-500 to-indigo-600' },
                     { label: 'Average Product Revenue', value: `${formatCurrency(analytics.averageProductRevenue)} / Product`, icon: <RMIcon size={18} />, from: 'from-violet-500 to-purple-600' },
                     { label: 'Top Product', value: analytics.bestProduct.length > 15 ? analytics.bestProduct.slice(0, 15) + '...' : analytics.bestProduct, icon: <Trophy size={18} />, from: 'from-amber-500 to-orange-600' },
                   ].map((card, i) => (
@@ -2709,7 +2709,7 @@ export default function Dashboard() {
                     <div key={o.id} className="rounded-2xl border border-[#FDE2E9]/60 bg-[#FBFAF6] p-3 sm:p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[13px] font-black text-[#111111] break-words">{o.invoice_no || '—'}</p>
+                          <p className="text-[13px] font-black text-[#111111] break-words">{formatInvoiceNo(o.invoice_no)}</p>
                           <p className="text-[13px] text-[#374151]">{new Date(o.created_at).toLocaleDateString('en-IN')}</p>
                         </div>
                         <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
@@ -2795,7 +2795,7 @@ export default function Dashboard() {
                       return (
                         <React.Fragment key={o.id}>
                         <tr key={o.id} className="hover:bg-[#F9FAFB] text-center">
-                          <td className="whitespace-nowrap px-2 py-3 text-[11px] font-bold text-[#111111]">{o.invoice_no || '—'}</td>
+                          <td className="whitespace-nowrap px-2 py-3 text-[11px] font-bold text-[#111111]">{formatInvoiceNo(o.invoice_no)}</td>
                           <td className="max-w-[100px] truncate px-2 py-3 text-[11px] font-semibold text-[#111111]">{o.customer_name}</td>
                           <td className="whitespace-nowrap px-2 py-3 text-[11px] text-[#374151]">{o.phone}</td>
                           <td className="px-2 py-3"><span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span></td>
@@ -3777,7 +3777,7 @@ export default function Dashboard() {
             className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 sm:p-6"
             role="dialog"
             aria-modal="true"
-            aria-label={`Invoice ${invoicePreviewOrder.invoice_no || invoicePreviewOrder.id}`}
+            aria-label={`Invoice ${formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}`}
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setInvoicePreviewOrder(null)
             }}
@@ -3786,7 +3786,7 @@ export default function Dashboard() {
               <div className="flex shrink-0 items-center justify-between border-b border-[#FDE2E9]/60 bg-white px-4 py-3 sm:px-6">
                 <div>
                   <h2 className="text-base font-black text-[#111111]">Invoice Preview</h2>
-                  <p className="text-xs font-semibold text-[#6B7280]">{invoicePreviewOrder.invoice_no || invoicePreviewOrder.id}</p>
+                  <p className="text-xs font-semibold text-[#6B7280]">{formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -3816,7 +3816,7 @@ export default function Dashboard() {
               <div className="overflow-y-auto p-2 sm:p-5">
                 <div className="mx-auto max-w-3xl overflow-hidden rounded-xl bg-white shadow-sm">
                   <Invoice
-                    invoiceNo={invoicePreviewOrder.invoice_no || invoicePreviewOrder.id}
+                    invoiceNo={formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}
                     date={invoicePreviewOrder.created_at}
                     customerName={invoicePreviewOrder.customer_name}
                     phone={invoicePreviewOrder.phone}
