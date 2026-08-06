@@ -1,37 +1,18 @@
 const fs = require('fs');
-const path = require('path');
+let content = fs.readFileSync('src/pages/Dashboard.tsx', 'utf8');
 
-function walk(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  list.forEach(function(file) {
-    file = path.join(dir, file);
-    const stat = fs.statSync(file);
-    if (stat && stat.isDirectory()) { 
-      results = results.concat(walk(file));
-    } else { 
-      if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.html')) {
-        results.push(file);
-      }
-    }
-  });
-  return results;
-}
+// Add import
+content = content.replace(
+  /import \{ normalizeStructuredOrderItem \} from '\.\.\/lib\/retail'/g,
+  "import { normalizeStructuredOrderItem, formatInvoiceNo } from '../lib/retail'"
+);
 
-const files = walk('./src');
+// Replace formats
+content = content.replace(/\{o\.invoice_no \|\| '-'\}/g, '{formatInvoiceNo(o.invoice_no)}');
+content = content.replace(/\{o\.invoice_no \|\| '—'\}/g, '{formatInvoiceNo(o.invoice_no)}');
+content = content.replace(/invoiceNumber: order\.invoice_no \|\| order\.id \|\| '-',/g, 'invoiceNumber: formatInvoiceNo(order.invoice_no || order.id),');
+content = content.replace(/aria-label=\{\Invoice \$\{invoicePreviewOrder\.invoice_no \|\| invoicePreviewOrder\.id\}\\}/g, 'aria-label={Invoice }');
+content = content.replace(/>\{invoicePreviewOrder\.invoice_no \|\| invoicePreviewOrder\.id\}<\/p>/g, '>{formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}</p>');
+content = content.replace(/invoiceNo=\{invoicePreviewOrder\.invoice_no \|\| invoicePreviewOrder\.id\}/g, 'invoiceNo={formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}');
 
-files.forEach(file => {
-  let content = fs.readFileSync(file, 'utf8');
-  const orig = content;
-  
-  content = content.replace(/setFo₹/g, 'setForm');
-  content = content.replace(/paymentFo₹/g, 'paymentForm');
-  content = content.replace(/Confi₹/g, 'Confirm');
-  content = content.replace(/depositFo₹/g, 'depositForm');
-  content = content.replace(/no₹alizeOrdermode/g, 'normalizeOrderMode');
-
-  if (orig !== content) {
-    fs.writeFileSync(file, content, 'utf8');
-    console.log('Fixed', file);
-  }
-});
+fs.writeFileSync('src/pages/Dashboard.tsx', content);

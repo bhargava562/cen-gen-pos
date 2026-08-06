@@ -315,7 +315,7 @@ export default function Dashboard() {
     }
     setOrders(current => [completed, ...current.filter(order => order.id !== completed.id)])
     setSearchResults(current => [completed, ...current.filter(order => order.id !== completed.id)].slice(0, 100))
-    setOrderItems(current => [...completedItems.map(item => ({ order_id: completed.id, product_name: String(item.name || 'Product'), category: String(item.category || advance.category || ''), quantity: Number(item.quantity || 1), line_total: Number(item.line_total || 0), is_manual: false }), ...current.filter(row => row.order_id !== completed.id)])
+    setOrderItems(current => [...completedItems.map(item => ({ order_id: completed.id, product_name: String(item.name || 'Product'), category: String(item.category || advance.category || ''), quantity: Number(item.quantity || 1), line_total: Number(item.line_total || 0), is_manual: false })), ...current.filter(row => row.order_id !== completed.id)])
   }, [user?.id])
 
   // Analytics (date-aware)
@@ -803,7 +803,7 @@ export default function Dashboard() {
     const message = buildProfessionalWhatsAppMessage({
       customerName: order.customer_name,
       phone: order.phone,
-      invoiceNumber: formatInvoiceNo(order.invoice_no || order.id),
+      invoiceNumber: order.invoice_no || order.id,
       invoiceDate: order.created_at,
       items: items.map(item => ({
         name: item.name,
@@ -812,13 +812,13 @@ export default function Dashboard() {
         unitType: item.unit_type,
         rate: item.base_price,
         lineTotal: item.line_total,
-      }),
+      })),
       subtotal,
       couponDiscount: order.discount_amount,
       shipping: order.delivery_charge,
       total: order.total,
     })
-    return { items, subtotal, message, fileName: `Invoice-${formatInvoiceNo(order.invoice_no || order.id)}.pdf` }
+    return { items, subtotal, message, fileName: `Invoice-${order.invoice_no || order.id}.pdf` }
   }
 
 
@@ -828,7 +828,7 @@ export default function Dashboard() {
     const subtotal = order.total - (order.delivery_charge || 0) + (order.discount_amount || 0)
 
     printThermalReceipt({
-      invoiceNo: formatInvoiceNo(order.invoice_no || order.id),
+      invoiceNo: order.invoice_no || order.id,
       date: order.created_at,
       customerName: order.customer_name,
       phone: order.phone,
@@ -847,7 +847,7 @@ export default function Dashboard() {
         unit: item.unit || '',
         price: item.price || item.base_price || 0,
         line_total: item.line_total || 0
-      }),
+      })),
       subtotal,
       shipping: order.delivery_charge || 0,
       couponDiscount: order.discount_amount || 0,
@@ -865,7 +865,7 @@ export default function Dashboard() {
     if (order.invoice_pdf_url) {
       const link = document.createElement('a')
       link.href = order.invoice_pdf_url
-      if (mode === 'download') link.download = `Invoice-${formatInvoiceNo(order.invoice_no || order.id)}.pdf`
+      if (mode === 'download') link.download = `Invoice-${order.invoice_no || order.id}.pdf`
       if (mode === 'download') { link.click(); return }
       const opened = window.open(order.invoice_pdf_url, '_blank', 'noopener,noreferrer')
       if (mode === 'print') opened?.addEventListener('load', () => opened.print())
@@ -874,7 +874,7 @@ export default function Dashboard() {
     const preview = getOrderWhatsAppPreview(order)
     if (!preview) { alert('This order has no invoice details available.'); return }
     const file = invoicePdfFile({
-      invoiceNo: formatInvoiceNo(order.invoice_no || order.id),
+      invoiceNo: order.invoice_no || order.id,
       date: order.created_at,
       customerName: order.customer_name,
       phone: order.phone,
@@ -1101,7 +1101,7 @@ export default function Dashboard() {
         unit_type: unitType, unit_label: prodForm.unitLabel,
         base_quantity: toNumber(prodForm.baseQuantity, 1),
         stock_quantity: toNumber(prodForm.stockQuantity, 0),
-        stock: Math.floor(toNumber(prodForm.stockQuantity, 0),
+        stock: Math.floor(toNumber(prodForm.stockQuantity, 0)),
         allow_decimal_quantity: prodForm.allowDecimalQuantity,
         predefined_options: predefined_options.length > 0 ? predefined_options : [],
         is_active: prodForm.isActive, sort_order: toNumber(prodForm.sortOrder, 0),
@@ -1663,7 +1663,7 @@ export default function Dashboard() {
                     <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center">
                       <span className="text-[13px] font-bold text-[#374151]">Discounts Applied</span>
                       <span className="text-[16px] font-black text-[#10B981]">
-                        {formatCurrency(searchResults.reduce((acc, o) => acc + (toNumber(o.discount_amount, 0), 0))}
+                        {formatCurrency(searchResults.reduce((acc, o) => acc + (toNumber(o.discount_amount, 0)), 0))}
                       </span>
                     </div>
                   </div>
@@ -1775,7 +1775,7 @@ export default function Dashboard() {
                             unitType: item.unit_type,
                             rate: item.base_price,
                             lineTotal: item.line_total,
-                          }),
+                          })),
                           subtotal: normalizedItems.reduce((sum, item) => sum + item.line_total, 0),
                           total: getOrderTotal(order),
                           paymentMode: order.payment_mode || order.payment_method,
@@ -2216,7 +2216,7 @@ export default function Dashboard() {
                   {[
                     { label: "TODAY'S REVENUE", value: formatCurrency(analytics.todaySales), icon: <RMIcon size={20} className="text-emerald-700" />, bg: 'bg-emerald-50', border: 'border-emerald-100' },
                     { label: "COMPLETED ORDERS", value: String(analytics.todayCompletedOrdersCount), icon: <ShoppingCart size={20} className="text-blue-700" />, bg: 'bg-blue-50', border: 'border-blue-100' },
-                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold), icon: <Package size={20} className="text-purple-700" />, bg: 'bg-purple-50', border: 'border-purple-100' },
+                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold)), icon: <Package size={20} className="text-purple-700" />, bg: 'bg-purple-50', border: 'border-purple-100' },
                     { label: "AVG ORDER VALUE", value: formatCurrency(analytics.todayAvgOrderValue), icon: <Trophy size={20} className="text-amber-700" />, bg: 'bg-amber-50', border: 'border-amber-100' },
                   ].map((card, i) => (
                     <div key={i} className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between gap-4">
@@ -2316,7 +2316,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Product Revenue', value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={18} />, from: 'from-emerald-500 to-teal-600' },
-                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold), icon: <Package size={18} />, from: 'from-blue-500 to-indigo-600' },
+                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold)), icon: <Package size={18} />, from: 'from-blue-500 to-indigo-600' },
                     { label: 'Average Product Revenue', value: `${formatCurrency(analytics.averageProductRevenue)} / Product`, icon: <RMIcon size={18} />, from: 'from-violet-500 to-purple-600' },
                     { label: 'Top Product', value: analytics.bestProduct.length > 15 ? analytics.bestProduct.slice(0, 15) + '...' : analytics.bestProduct, icon: <Trophy size={18} />, from: 'from-amber-500 to-orange-600' },
                   ].map((card, i) => (
@@ -3777,7 +3777,7 @@ export default function Dashboard() {
             className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-3 sm:p-6"
             role="dialog"
             aria-modal="true"
-            aria-label={`Invoice ${formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}`}
+            aria-label={`Invoice ${invoicePreviewOrder.invoice_no || invoicePreviewOrder.id}`}
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setInvoicePreviewOrder(null)
             }}
