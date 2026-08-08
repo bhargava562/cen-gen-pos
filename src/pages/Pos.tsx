@@ -71,8 +71,17 @@ type InvoiceSnap = {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+// Returns the product ID if it looks like a real DB identifier (UUID or numeric),
+// or null for synthetic/manual IDs like "manual-<timestamp>".
 const toProductId = (v: string | number): string | null => {
-  const s = String(v ?? '').trim(); return s || null
+  const s = String(v ?? '').trim()
+  if (!s) return null
+  // Accept pure-numeric strings (BIGINT products.id)
+  if (/^\d+$/.test(s)) return s
+  // Accept UUID format (product_variants.id and UUID-keyed products)
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)) return s
+  // Anything else (e.g. "manual-1786182383886") is a client-side synthetic ID — not a real DB row
+  return null
 }
 
 const makePosItem = (p: Product, qty?: number): PosItem => {
@@ -120,6 +129,7 @@ export default function Pos(props: PosProps = {}) {
   const [customer, setCustomer] = useState({ name: '', phone: '', address: '' })
   const [remarks, setRemarks] = useState('')
   const [referenceNumber, setReferenceNumber] = useState('')
+  const [billingDate, setBillingDate] = useState('') // '' = use current date/time
   const [paymentType, setPaymentType] = useState<'cash' | 'qr' | 'card'>('cash')
   const [saving, setSaving] = useState(false)
   const [shipping, setShipping] = useState<string>('0')
@@ -361,6 +371,7 @@ export default function Pos(props: PosProps = {}) {
     setShipping('0')
     setRemarks('')
     setReferenceNumber('')
+    setBillingDate('')
     setBillGstEnabled(false)
     setGstInput('')
     setGstType('percent')
@@ -531,6 +542,10 @@ export default function Pos(props: PosProps = {}) {
       // ── CRITICAL: immediately fix totals in DB, independent of PDF upload ──
       // The RPC may store an incorrect total if items JSONB parsing differs.
       // This guarantees the correct client-computed values are always saved.
+      // Determine the effective billing date/time
+      const effectiveBillingDate = billingDate.trim()
+        ? new Date(billingDate).toISOString()
+        : new Date().toISOString()
       await supabase.from('orders').update({
         subtotal,
         total,
@@ -542,13 +557,14 @@ export default function Pos(props: PosProps = {}) {
         manual_discount_amount: manualDiscountAmount,
         delivery_charge: Number(shipping || 0),
         remarks: remarks.trim(),
-        reference_number: referenceNumber.trim()
+        reference_number: referenceNumber.trim(),
+        billing_date: effectiveBillingDate,
       }).eq('id', created.orderId)
       const createdInvoice: InvoiceSnap = {
         id: created.orderId,
         invoiceNo: created.invoiceNo,
         orderType: getOrderType(),
-        date: created.createdAt,
+        date: billingDate.trim() ? new Date(billingDate).toISOString() : created.createdAt,
         items: [...items],
         subtotal,
         shipping: Number(shipping || 0),
@@ -869,6 +885,17 @@ export default function Pos(props: PosProps = {}) {
                   placeholder="Optional ref no."
                   className="w-full h-12 px-4 bg-white border border-[#FDE2E9]/60 rounded-xl focus:outline-none focus:border-[#E8547C] text-[16px] md:text-[13px] font-bold text-[#111111] placeholder:text-gray-400 placeholder:font-medium"
                 />
+              </div>
+              <div>
+                <label className="block text-[13px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1.5">Billing Date (Optional)</label>
+                <input
+                  id="pos-billing-date"
+                  type="datetime-local"
+                  value={billingDate}
+                  onChange={e => setBillingDate(e.target.value)}
+                  className="w-full h-12 px-4 bg-white border border-[#FDE2E9]/60 rounded-xl focus:outline-none focus:border-[#E8547C] text-[16px] md:text-[13px] font-bold text-[#111111]"
+                />
+                <p className="mt-1 text-[10px] text-gray-400 font-medium">Leave blank to use today's date &amp; time</p>
               </div>
             </div>
           </div>

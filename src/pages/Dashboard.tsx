@@ -1044,25 +1044,101 @@ export default function Dashboard() {
     e?.preventDefault()
     setSearchLoading(true)
     try {
+      const invInput = search.invoiceNo.trim()
+      const phoneInput = search.phone.trim()
+      const custInput = search.customerName.trim()
+      const hasQuery = Boolean(invInput || phoneInput || custInput)
+
       let q = supabase.from('orders')
-        .select('id, invoice_no, customer_name, phone, address, created_at, total, status, order_mode, order_type, items, coupon_code, discount_amount, delivery_charge')
+        .select('id, invoice_no, customer_name, phone, address, created_at, total, status, order_mode, order_type, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, invoice_pdf_url, remarks, reference_number')
         .neq('order_type', 'online_request')
         .order('created_at', { ascending: false })
-        .limit(500)
-      if (search.invoiceNo.trim())    q = q.ilike('invoice_no', `%${search.invoiceNo.trim()}%`)
-      if (search.phone.trim())        q = q.ilike('phone', `%${search.phone.trim()}%`)
-      if (search.customerName.trim()) q = q.ilike('customer_name', `%${search.customerName.trim()}%`)
-      if (search.dateFrom)        q = q.gte('created_at', `${search.dateFrom}T00:00:00`)
-      if (search.dateTo)          q = q.lte('created_at', `${search.dateTo}T23:59:59`)
-      if (billTypeFilter === 'manual')  q = q.eq('order_type', 'manual_sale')
+        .limit(hasQuery ? 1000 : 500)
+
+      if (invInput) {
+        const digitsOnly = invInput.replace(/\D/g, '')
+        const nonZeroDigits = digitsOnly.replace(/^0+/, '')
+        const conds = [`invoice_no.ilike.%${invInput}%`]
+        if (digitsOnly && digitsOnly !== invInput) conds.push(`invoice_no.ilike.%${digitsOnly}%`)
+        if (nonZeroDigits && nonZeroDigits !== digitsOnly && nonZeroDigits !== invInput) conds.push(`invoice_no.ilike.%${nonZeroDigits}%`)
+        q = q.or(conds.join(','))
+      }
+
+      if (phoneInput) {
+        const digitsOnly = phoneInput.replace(/\D/g, '')
+        if (digitsOnly && digitsOnly.length >= 4) {
+          q = q.or(`phone.ilike.%${phoneInput}%,phone.ilike.%${digitsOnly}%`)
+        } else {
+          q = q.ilike('phone', `%${phoneInput}%`)
+        }
+      }
+
+      if (custInput) {
+        q = q.ilike('customer_name', `%${custInput}%`)
+      }
+
+      // Apply date filters only if no specific text query is active or if custom date range was selected
+      if (!hasQuery || datePreset === 'custom') {
+        if (search.dateFrom) q = q.gte('created_at', `${search.dateFrom}T00:00:00`)
+        if (search.dateTo)   q = q.lte('created_at', `${search.dateTo}T23:59:59`)
+      }
+
+      if (billTypeFilter === 'manual')       q = q.eq('order_type', 'manual_sale')
       else if (billTypeFilter === 'offline') q = q.eq('order_type', 'pos_sale').eq('order_mode', 'offline')
       else if (billTypeFilter === 'online')  q = q.eq('order_type', 'pos_sale').eq('order_mode', 'online')
 
       const { data, error } = await q
       if (error) throw error
-      setSearchResults((data || []).map(r => toDashboardOrder(r as Record<string,unknown>)).filter(o => !deletedOrderIds.current.has(o.id)))
-    } catch (err) { console.error(err); setSearchResults([]) }
-    finally { setSearchLoading(false) }
+
+      let results = (data || []).map(r => toDashboardOrder(r as Record<string, unknown>))
+
+      // Client-side match filter to handle formatted invoice numbers (e.g. INV0000013 vs PB-20260716-000013)
+      const matchOrder = (o: DashboardOrder) => {
+        if (invInput) {
+          const matchRaw = o.invoice_no.toLowerCase().includes(invInput.toLowerCase())
+          const matchFmt = formatInvoiceNo(o.invoice_no).toLowerCase().includes(invInput.toLowerCase())
+          const matchId  = o.id.toLowerCase() === invInput.toLowerCase()
+          const invDigits = invInput.replace(/\D/g, '')
+          const rawDigits = o.invoice_no.replace(/\D/g, '')
+          const matchDigits = invDigits && (rawDigits.endsWith(invDigits) || rawDigits.includes(invDigits))
+          if (!matchRaw && !matchFmt && !matchId && !matchDigits) return false
+        }
+        if (custInput) {
+          const matchCust = o.customer_name.toLowerCase().includes(custInput.toLowerCase())
+          if (!matchCust) return false
+        }
+        if (phoneInput) {
+          const pDigits = phoneInput.replace(/\D/g, '')
+          const rawPhoneDigits = o.phone.replace(/\D/g, '')
+          const matchPhoneRaw = o.phone.toLowerCase().includes(phoneInput.toLowerCase())
+          const matchPhoneDigits = Boolean(pDigits && rawPhoneDigits.includes(pDigits))
+          if (!matchPhoneRaw && !matchPhoneDigits) return false
+        }
+        return true
+      }
+
+      if (hasQuery) {
+        results = results.filter(matchOrder)
+      }
+
+      // Fallback: if query returned no results from Supabase, search in pre-loaded orders
+      if (hasQuery && results.length === 0 && orders.length > 0) {
+        const localMatches = orders.filter(o => {
+          if (normalizeOrderType(o.order_type) === 'online_request') return false
+          return matchOrder(o)
+        })
+        if (localMatches.length > 0) {
+          results = localMatches
+        }
+      }
+
+      setSearchResults(results.filter(o => !deletedOrderIds.current.has(o.id)))
+    } catch (err) {
+      console.error('Search error:', err)
+      setSearchResults([])
+    } finally {
+      setSearchLoading(false)
+    }
   }
 
   // ΓöÇΓöÇ Product CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
