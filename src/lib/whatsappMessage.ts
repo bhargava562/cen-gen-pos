@@ -66,7 +66,13 @@ ${input.invoiceDate ? `📅 *Date:* ${new Date(input.invoiceDate).toLocaleDateSt
 ${itemsText ? `📦 *ITEMS ORDERED:*\n${itemsText}\n\n` : ''}📄 *View & Download Digital Invoice / PDF:*
 👉 ${invoiceUrl}
 
-💖 Thank you, and we hope to see you again soon!`
+💖 Thank you, and we hope to see you again soon!
+
+Follow us on Instagram:
+https://www.instagram.com/sreejas_bridal_boutique?igsh=b2pqdWE3eGh1cmsw
+
+Review us on Google:
+https://www.google.com/search?sca_esv=2e6c317c12a55098&hl=en-GB&rlz=1CDGOYI_enIN1040IN1042&cs=1&output=search&kgmid=/g/11mkxl_2wy&q=Sreeja%27s+Bridal+Boutique&shem=epsd1,ltae,rimspwouoe&shndl=30&source=sh/x/loc/hdr/m1/3&kgs=2a74f979cbe4d39e&utm_source=epsd1,ltae,rimspwouoe,sh/x/loc/hdr/m1/3#ebo=0&sbfbu=1&pi=Sreeja’s%20Bridal%20Boutique%20Kakinada`
 }
 
 export const buildAdvanceDepositWhatsAppMessage = (input: AdvanceDepositWhatsAppInput) => {
