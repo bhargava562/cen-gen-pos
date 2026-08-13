@@ -158,8 +158,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         : manualDiscountNum
       const finalAmount = Math.max(0, paymentOrder.remaining_balance - couponDiscount - manualDisc)
       const parts = [paymentForm.remarks]
-      if (appliedCoupon) parts.push(`Coupon: ${appliedCoupon.code} (-${appliedCoupon.percentage}%) = -RM${couponDiscount.toFixed(2)}`)
-      if (manualDisc > 0) parts.push(`Manual Discount: ${manualDiscountType === '%' ? manualDiscountNum + '%' : '₹' + manualDiscountNum.toFixed(2)} = -RM${manualDisc.toFixed(2)}`)
+      if (appliedCoupon) parts.push(`Coupon: ${appliedCoupon.code} (-${appliedCoupon.percentage}%) = -INR ${couponDiscount.toFixed(2)}`)
+      if (manualDisc > 0) parts.push(`Manual Discount: ${manualDiscountType === '%' ? manualDiscountNum + '%' : '₹' + manualDiscountNum.toFixed(2)} = -INR ${manualDisc.toFixed(2)}`)
       const remarksWithCoupon = parts.filter(Boolean).join(' | ')
       const result = await completeAdvanceOrder(
         paymentOrder.id, 

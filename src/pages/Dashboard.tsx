@@ -126,7 +126,7 @@ const emptyForm = {
 }
 
 const exportCSV = (orders: DashboardOrder[]) => {
-  const header = ['Order Ref', 'Customer', 'Phone', 'Date', 'Total (RM)', 'Order Type', 'Status']
+  const header = ['Order Ref', 'Customer', 'Phone', 'Date', 'Total (INR)', 'Order Type', 'Status']
   const rows = orders.map(o => [
     o.order_type === 'online_request' ? o.id : o.invoice_no, o.customer_name, o.phone,
     new Date(o.created_at).toLocaleDateString('en-MY'),
@@ -2843,9 +2843,11 @@ export default function Dashboard() {
                           <option value="pending">{l('Pending', 'நிலுவை')}</option>
                           <option value="completed">{l('Completed', 'முடிந்தது')}</option>
                         </select>
-                        <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl border border-[#FDE2E9]/60 text-[#E8547C] transition-colors hover:bg-[#E8547C]/5" title="Delete Order">
-                          <Trash2 size={14} className="mx-auto" />
-                        </button>
+                        {role === 'admin' && (
+                          <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl border border-[#FDE2E9]/60 text-[#E8547C] transition-colors hover:bg-[#E8547C]/5" title="Delete Order">
+                            <Trash2 size={14} className="mx-auto" />
+                          </button>
+                        )}
                         </div>
                       </div>
                     </div>
@@ -2893,9 +2895,11 @@ export default function Dashboard() {
                                 <option value="pending">{l('Pending', 'நிலுவை')}</option>
                                 <option value="completed">{l('Completed', 'முடிந்தது')}</option>
                               </select>
-                              <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="rounded-lg p-1 text-[#E8547C] transition-colors hover:bg-[#E8547C]/5" title="Delete Order">
-                                <Trash2 size={13} />
-                              </button>
+                              {role === 'admin' && (
+                                <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="rounded-lg p-1 text-[#E8547C] transition-colors hover:bg-[#E8547C]/5" title="Delete Order">
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
                             </div>
                           </td>
                           <td className="px-2 py-3">
@@ -3005,7 +3009,7 @@ export default function Dashboard() {
                       placeholder="எ.கா. மஞ்சள் பொடி" value={prodForm.nameTa} onChange={e => setProdForm(f => ({...f, nameTa: e.target.value}))} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Price (RM)', 'விலை (RM)')} *</label>
+                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Price (INR)', 'விலை (INR)')} *</label>
                     <input required type="number" min="0" step="0.01"
                       className="w-full px-4 py-2.5 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-maroon-dark rounded-xl text-[13px] font-bold outline-none transition-colors"
                       value={prodForm.price} onChange={e => setProdForm(f => ({...f, price: Number(e.target.value)}))} />
@@ -3014,20 +3018,20 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Purchase Price (RM)', 'வாங்கிய விலை')} *</label>
+                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Purchase Price (INR)', 'வாங்கிய விலை')} *</label>
                     <input required type="number" min="0" step="0.01"
                       className="w-full px-4 py-2.5 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-maroon-dark rounded-xl text-[13px] font-bold outline-none transition-colors"
                       value={prodForm.purchasePrice} onChange={e => setProdForm(f => ({...f, purchasePrice: Number(e.target.value)}))} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('MRP (RM)', 'MRP (RM)')}</label>
+                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('MRP (INR)', 'MRP (INR)')}</label>
                     <input type="number" min="0" step="0.01"
                       className="w-full px-4 py-2.5 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-maroon-dark rounded-xl text-[13px] font-bold outline-none transition-colors"
                       placeholder="Maximum Retail Price"
                       value={prodForm.mrp} onChange={e => setProdForm(f => ({...f, mrp: e.target.value}))} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Offer Price (RM)', 'சலுகை விலை')}</label>
+                    <label className="block text-[11px] font-black uppercase text-[#6B7280] tracking-wider mb-1">{l('Offer Price (INR)', 'சலுகை விலை')}</label>
                     <input type="number" min="0" step="0.01"
                       className="w-full px-4 py-2.5 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-maroon-dark rounded-xl text-[13px] font-bold outline-none transition-colors"
                       placeholder="Leave blank for no discount"
@@ -3299,7 +3303,7 @@ export default function Dashboard() {
                           onChange={e => setVariantForm(f => ({...f, sizeLabel: e.target.value}))} />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('Purchase Price (RM)', 'வாங்கிய விலை')}</label>
+                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('Purchase Price (INR)', 'வாங்கிய விலை')}</label>
                         <input type="number" min="0" step="0.01"
                           className="w-full px-4 py-2.5 bg-white rounded-xl border border-[#D1D5DB] text-[13px] font-bold outline-none focus:border-maroon-dark transition-colors shadow-sm"
                           placeholder="30"
@@ -3307,7 +3311,7 @@ export default function Dashboard() {
                           onChange={e => setVariantForm(f => ({...f, purchasePrice: e.target.value}))} />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('MRP (RM)', 'MRP (RM)')}</label>
+                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('MRP (INR)', 'MRP (INR)')}</label>
                         <input type="number" min="0" step="0.01"
                           className="w-full px-4 py-2.5 bg-white rounded-xl border border-[#D1D5DB] text-[13px] font-bold outline-none focus:border-maroon-dark transition-colors shadow-sm"
                           placeholder="50"
@@ -3315,7 +3319,7 @@ export default function Dashboard() {
                           onChange={e => setVariantForm(f => ({...f, mrp: e.target.value}))} />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('Selling Price (RM) *', 'விற்பனை விலை *')}</label>
+                        <label className="block text-[11px] font-black uppercase tracking-wider text-[#6B7280] mb-1">{l('Selling Price (INR) *', 'விற்பனை விலை *')}</label>
                         <input required type="number" min="0" step="0.01"
                           className="w-full px-4 py-2.5 bg-white rounded-xl border border-[#D1D5DB] text-[13px] font-bold outline-none focus:border-maroon-dark transition-colors shadow-sm"
                           placeholder="40"
@@ -3599,7 +3603,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-[#6B7280]">{l('Min Order (RM)', 'குறைந்த ஆர்டர் (RM)')}</label>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-[#6B7280]">{l('Min Order (INR)', 'குறைந்த ஆர்டர் (INR)')}</label>
                     <input
                       type="number"
                       min="0"

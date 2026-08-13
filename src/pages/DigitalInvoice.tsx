@@ -37,42 +37,39 @@ export default function DigitalInvoice() {
       try {
         const identifier = decodeURIComponent(id || '').trim()
         const formattedIdentifier = formatInvoiceNo(identifier)
+        const strippedIdentifier = identifier.replace(/^INV/i, '')
 
-        // Try RPC lookup by invoice number first
-        let { data: rpcData, error: rpcError } = await supabase.rpc('get_public_invoice_by_number', {
-          p_invoice_no: identifier,
-        })
-        if ((!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) && formattedIdentifier) {
-          const fallbackRpc = await supabase.rpc('get_public_invoice_by_number', {
-            p_invoice_no: formattedIdentifier,
-          })
-          if (fallbackRpc.data) {
-            rpcData = fallbackRpc.data
-            rpcError = fallbackRpc.error
+        const tryRpc = async (invNo: string) => supabase.rpc('get_public_invoice_by_number', { p_invoice_no: invNo })
+
+        let rpcResult = await tryRpc(identifier)
+        if (!rpcResult.data || (Array.isArray(rpcResult.data) && rpcResult.data.length === 0)) {
+          if (strippedIdentifier && strippedIdentifier !== identifier) {
+             rpcResult = await tryRpc(strippedIdentifier)
+          }
+        }
+        if (!rpcResult.data || (Array.isArray(rpcResult.data) && rpcResult.data.length === 0)) {
+          if (formattedIdentifier && formattedIdentifier !== identifier && formattedIdentifier !== strippedIdentifier) {
+             rpcResult = await tryRpc(formattedIdentifier)
           }
         }
 
+        let { data: rpcData, error: rpcError } = rpcResult
         let row = Array.isArray(rpcData) ? rpcData[0] : rpcData
 
         // Keep existing links working when the public-invoice RPC has not yet
         // been applied to the target project.
         if (!row || rpcError) {
-          let { data: invoiceData } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('invoice_no', identifier)
-            .maybeSingle()
-
-          if (!invoiceData && formattedIdentifier) {
-            const { data: fmtData } = await supabase
-              .from('orders')
-              .select('*')
-              .eq('invoice_no', formattedIdentifier)
-              .maybeSingle()
-            invoiceData = fmtData
+          const tryTable = async (invNo: string) => supabase.from('orders').select('*').eq('invoice_no', invNo).maybeSingle()
+          
+          let tableResult = await tryTable(identifier)
+          if (!tableResult.data && strippedIdentifier && strippedIdentifier !== identifier) {
+            tableResult = await tryTable(strippedIdentifier)
           }
-
-          row = invoiceData
+          if (!tableResult.data && formattedIdentifier && formattedIdentifier !== identifier && formattedIdentifier !== strippedIdentifier) {
+            tableResult = await tryTable(formattedIdentifier)
+          }
+          
+          row = tableResult.data
 
           if (!row && isUuid(identifier)) {
             const { data: idData } = await supabase
