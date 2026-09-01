@@ -40,7 +40,7 @@ interface ProfileOrder {
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: '#FEF3C7', text: '#92400E', label: 'Pending' },
   processing: { bg: '#DBEAFE', text: '#1E40AF', label: 'Processing' },
-  completed: { bg: '#FDE2E9', text: '#065F46', label: 'Completed' },
+  completed: { bg: '#E5E7EB', text: '#065F46', label: 'Completed' },
   responded: { bg: '#DBEAFE', text: '#1E40AF', label: 'Responded' },
   cancelled: { bg: '#FEE2E2', text: '#991B1B', label: 'Cancelled' },
 }

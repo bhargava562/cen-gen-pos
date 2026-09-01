@@ -53,7 +53,7 @@ export default function DigitalInvoice() {
           }
         }
 
-        let { data: rpcData, error: rpcError } = rpcResult
+        const { data: rpcData, error: rpcError } = rpcResult
         let row = Array.isArray(rpcData) ? rpcData[0] : rpcData
 
         // Keep existing links working when the public-invoice RPC has not yet
@@ -231,19 +231,19 @@ export default function DigitalInvoice() {
     <div className="h-full overflow-y-auto bg-[#f9faf6] font-sans pb-12 print:bg-white print:pb-0">
       {/* Top action bar */}
       <div className="bg-[#f9faf6] p-4 sticky top-0 z-50 print:hidden flex items-center justify-between max-w-4xl mx-auto">
-        <button onClick={handleBack} className="flex items-center gap-2 text-sageDark hover:text-[#2d5a27] font-semibold text-sm transition-colors bg-white border border-sand/40 px-4 py-2 rounded-full shadow-sm cursor-pointer">
+        <button onClick={handleBack} className="flex items-center gap-2 text-[#0A0A0A] hover:text-[#D4AF37] font-semibold text-sm transition-colors bg-white border border-[#E8D399] px-4 py-2 rounded-full shadow-sm cursor-pointer">
           <ArrowLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={downloadPdf}
-            className="flex items-center gap-2 bg-[#E8547C] text-white px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-[#C73660] transition-colors"
+            className="flex items-center gap-2 bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-[#1A1A1A] transition-colors cursor-pointer"
           >
-            <Printer size={16} /> PDF
+            <Printer size={16} /> PDF Invoice
           </button>
           <button
             onClick={shareViaWhatsApp}
-            className="flex items-center gap-2 bg-green-500 text-white px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-green-600 transition-colors"
+            className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-emerald-700 transition-colors cursor-pointer"
           >
             <MessageCircle size={16} /> WhatsApp
           </button>

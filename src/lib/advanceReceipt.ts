@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf'
-import { BRAND_ADDRESS, BRAND_EN, BRAND_LOGO, BRAND_PHONE_DISPLAY } from './brand'
+import { BRAND_ADDRESS, BRAND_EN, BRAND_LOGO, BRAND_PHONE_DISPLAY, BRAND_PRIMARY_PHONE_DISPLAY } from './brand'
 import { LOGO_BASE64 } from './logoBase64'
 import { formatCurrency } from './retail'
 import type { AdvanceOrder } from '../services/advanceOrderService'
@@ -17,13 +17,13 @@ const pdfMoney = (value: number): string => {
 
 export function advanceReceiptPdf(order: AdvanceOrder) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  doc.setFillColor('#E8547C'); doc.rect(0, 0, 210, 5, 'F')
-  try { doc.addImage(LOGO_BASE64, 'JPEG', 16, 10, 12, 12) } catch {}
-  doc.setTextColor('#C73660'); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(BRAND_EN.toUpperCase(), 38, 20)
+  doc.setFillColor('#0A0A0A'); doc.rect(0, 0, 210, 5, 'F')
+  try { doc.addImage(LOGO_BASE64, 'JPEG', 16, 10, 12, 12) } catch (_err) { /* ignore missing logo */ }
+  doc.setTextColor('#111111'); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(BRAND_EN.toUpperCase(), 38, 20)
   doc.setTextColor('#6b7280'); doc.setFontSize(8); doc.text('ADVANCE RECEIPT - NOT A TAX INVOICE', 38, 26)
 
-  doc.setFont('helvetica', 'normal'); doc.text(BRAND_ADDRESS, 194, 20, { align: 'right', maxWidth: 76 }); doc.text(BRAND_PHONE_DISPLAY, 194, 30, { align: 'right' })
-  doc.setDrawColor('#E8547C'); doc.line(16, 38, 194, 38)
+  doc.setFont('helvetica', 'normal'); doc.text(BRAND_ADDRESS, 194, 20, { align: 'right', maxWidth: 76 }); doc.text(BRAND_PRIMARY_PHONE_DISPLAY, 194, 30, { align: 'right' })
+  doc.setDrawColor('#D4AF37'); doc.line(16, 38, 194, 38)
   doc.setTextColor('#111827'); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(order.deposit_id, 16, 51)
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor('#6b7280'); doc.text(`Created: ${new Date(order.created_at).toLocaleString('en-IN')}`, 194, 51, { align: 'right' })
   const rows = [
@@ -32,9 +32,9 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   ]
   let y = 66
   rows.forEach(([label, value]) => { doc.setFont('helvetica', 'bold'); doc.setTextColor('#6b7280'); doc.text(label.toUpperCase(), 16, y); doc.setFont('helvetica', 'normal'); doc.setTextColor('#111827'); doc.text(String(value), 64, y, { maxWidth: 126 }); y += 10 })
-  y += 4; doc.setFillColor('#FFF0F3'); doc.roundedRect(16, y, 178, 42, 3, 3, 'F')
+  y += 4; doc.setFillColor('#FBFAF6'); doc.roundedRect(16, y, 178, 42, 3, 3, 'F')
   const money = [[ 'Total order amount', order.total_amount ], [ 'Deposit paid', order.deposit_amount ], [ 'Remaining balance', order.remaining_balance ]] as const
-  money.forEach(([label, value], index) => { const rowY = y + 11 + index * 11; doc.setFont('helvetica', index === 2 ? 'bold' : 'normal'); doc.setTextColor(index === 2 ? '#C73660' : '#374151'); doc.text(label, 22, rowY); doc.text(pdfMoney(value), 188, rowY, { align: 'right' }) })
+  money.forEach(([label, value], index) => { const rowY = y + 11 + index * 11; doc.setFont('helvetica', index === 2 ? 'bold' : 'normal'); doc.setTextColor(index === 2 ? '#B48811' : '#374151'); doc.text(label, 22, rowY); doc.text(pdfMoney(value), 188, rowY, { align: 'right' }) })
   doc.setFont('helvetica', 'bold'); doc.setTextColor('#b45309'); doc.setFontSize(9); doc.text('This receipt records an advance payment only. It is not a final invoice.', 105, y + 55, { align: 'center' })
   return new File([doc.output('blob')], `Advance-Receipt-${order.deposit_id}.pdf`, { type: 'application/pdf' })
 }

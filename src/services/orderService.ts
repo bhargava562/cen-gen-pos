@@ -83,13 +83,19 @@ export const createOrderWithStock = async (input: CreateOrderInput): Promise<Cre
     p_split_details:          splitDetails,
   }
 
-  const newRpcResult = await supabase.rpc('create_order_with_stock', rpcPayload)
-  data = newRpcResult.data
-  error = newRpcResult.error
+  // 1. Try complete_pos_sale_with_inventory (inventory-aware transaction with atomic stock checks & movements ledger)
+  const inventoryRpcResult = await supabase.rpc('complete_pos_sale_with_inventory', rpcPayload)
+  data = inventoryRpcResult.data
+  error = inventoryRpcResult.error
 
-  // Legacy Purple Boutique databases expose the original 15-argument RPC.
-  // Retry through its no-stock variant until migration 0003 is installed.
-  if (newRpcResult.error?.code === 'PGRST202') {
+  // 2. Fallback to create_order_with_stock if migration 0012 is not yet deployed
+  if (inventoryRpcResult.error?.code === 'PGRST202') {
+    const newRpcResult = await supabase.rpc('create_order_with_stock', rpcPayload)
+    data = newRpcResult.data
+    error = newRpcResult.error
+
+    // 3. Fallback to create_order_without_stock for legacy setups
+    if (newRpcResult.error?.code === 'PGRST202') {
     const legacyResult = await supabase.rpc('create_order_without_stock', {
       p_address:                address,
       p_coupon_code:            couponCode,
@@ -135,6 +141,7 @@ export const createOrderWithStock = async (input: CreateOrderInput): Promise<Cre
       }
     }
   }
+}
 
 
 

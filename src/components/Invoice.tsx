@@ -1,5 +1,5 @@
 import React from 'react'
-import { BRAND_ADDRESS, BRAND_EN, BRAND_LOGO, BRAND_PHONE_DISPLAY } from '../lib/brand'
+import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_INSTAGRAM, BRAND_LOGO, BRAND_PRIMARY_PHONE_DISPLAY } from '../lib/brand'
 import { formatCurrency, formatQuantityDisplay, normalizeStructuredOrderItem, formatInvoiceNo } from '../lib/retail'
 
 export interface InvoiceItem {
@@ -66,39 +66,41 @@ export const Invoice: React.FC<InvoiceProps> = ({
     catch { return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) }
   })()
 
-  const statusColor = status === 'completed' ? '#E8547C' : status === 'cancelled' ? '#dc2626' : '#d97706'
+  const statusColor = status === 'completed' ? '#D4AF37' : status === 'cancelled' ? '#dc2626' : '#d97706'
   const effectiveDelivery = deliveryCharge || shipping
 
   return (
     <div
       id="invoice-print-root"
-      className="w-full max-w-[680px] mx-auto bg-white text-[#1a1a2e] box-border flex flex-col p-3 sm:p-8 print:p-0 print:max-w-full overflow-hidden"
+      className="w-full max-w-[680px] mx-auto bg-white text-[#111111] box-border flex flex-col p-4 sm:p-8 print:p-0 print:max-w-full overflow-hidden border border-[#E8D399]/40 shadow-xl rounded-3xl"
       style={{
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
     >
       {/* ── HEADER ────────────────────────────────────────────────── */}
-      <div style={{ textAlign: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: 20, marginBottom: 20 }}>
-        <div style={{ width: 80, height: 80, margin: '0 auto 12px auto', background: '#ffffff', borderRadius: 16, border: '1px solid #FDE2E9', padding: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ textAlign: 'center', borderBottom: '1px solid #E8D399', paddingBottom: 20, marginBottom: 20 }}>
+        <div style={{ width: 140, height: 44, margin: '0 auto 12px auto', background: '#0A0A0A', borderRadius: 12, border: '1px solid #D4AF37', padding: '4px 10px', boxShadow: '0 4px 12px rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: '#E8547C', letterSpacing: -0.5, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: 24, fontWeight: 900, color: '#0A0A0A', letterSpacing: 2, textTransform: 'uppercase' }}>
           {BRAND_EN}
         </div>
         <div style={{ fontSize: 11, color: '#4b5563', marginTop: 4, fontWeight: 500, paddingLeft: 8, paddingRight: 8 }}>
           {BRAND_ADDRESS}
         </div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#111111', marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 13, fontWeight: 900, color: '#0A0A0A', marginTop: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
           INVOICE: #{formattedInvoiceNo}
         </div>
-        <div style={{ fontSize: 11, color: '#4b5563', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <span>📞 {BRAND_PHONE_DISPLAY}</span>
+        <div style={{ fontSize: 11, color: '#4b5563', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>📞 {BRAND_PRIMARY_PHONE_DISPLAY}</span>
+          <span>✉️ {BRAND_EMAIL}</span>
+          <span>📷 @{BRAND_INSTAGRAM}</span>
         </div>
         <div
           style={{
             display: 'inline-block', marginTop: 10, padding: '3px 12px', borderRadius: 99,
             background: statusColor + '18', color: statusColor,
-            fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase',
+            fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', border: `1px solid ${statusColor}40`
           }}
         >
           {status}
@@ -117,14 +119,14 @@ export const Invoice: React.FC<InvoiceProps> = ({
             </>
           )}
         </div>
-        <div style={{ minWidth: 0, padding: '12px 14px', borderRadius: 10, background: '#FFF0F3', overflowWrap: 'anywhere' }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Customer</div>
+        <div style={{ minWidth: 0, padding: '12px 14px', borderRadius: 12, background: '#FBFAF6', border: '1px solid #E8D399', overflowWrap: 'anywhere' }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Customer Information</div>
           <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 6 }}>Customer Name</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.35, wordBreak: 'break-word' }}>{customerName || 'Walk-in Customer'}</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#0A0A0A', lineHeight: 1.35, wordBreak: 'break-word' }}>{customerName || 'Walk-in Customer'}</div>
           <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 6 }}>Mobile Number</div>
           <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4, wordBreak: 'break-word' }}>{phone || '—'}</div>
           {address && <div style={{ fontSize: 11, color: '#777', marginTop: 4, lineHeight: 1.4, wordBreak: 'break-word' }}>{address}</div>}
-          {paymentMode && <div style={{ fontSize: 10, color: '#777', marginTop: 4 }}>Payment: {paymentMode}</div>}
+          {paymentMode && <div style={{ fontSize: 10, color: '#777', marginTop: 4 }}>Payment Mode: {paymentMode}</div>}
         </div>
       </div>
 
@@ -135,12 +137,12 @@ export const Invoice: React.FC<InvoiceProps> = ({
       <div className="w-full overflow-x-auto">
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 320 }}>
           <thead>
-            <tr style={{ background: '#f3f8f3', borderRadius: 8 }}>
-              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.8, width: 28 }}>#</th>
-              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.8 }}>Product</th>
-              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.8, width: 45 }}>Qty</th>
-              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: 10, fontWeight: 800, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.8, width: 75 }}>Rate</th>
-              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: 10, fontWeight: 800, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.8, width: 85 }}>Amount</th>
+            <tr style={{ background: '#0A0A0A', borderRadius: 8 }}>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 0.8, width: 28 }}>#</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 0.8 }}>Item / SKU</th>
+              <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 10, fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 0.8, width: 45 }}>Qty</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: 10, fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 0.8, width: 75 }}>Rate</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: 10, fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 0.8, width: 85 }}>Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -151,7 +153,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
                 <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '10px 8px', fontSize: 11, color: '#999', verticalAlign: 'top' }}>{idx + 1}</td>
                   <td style={{ padding: '10px 8px', verticalAlign: 'top' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e' }}>{normalized.name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0A0A0A' }}>{normalized.name}</div>
                     {displayName && displayName !== normalized.name && <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{displayName}</div>}
                     {item.offerPrice && item.price !== item.offerPrice && (
                       <div style={{ fontSize: 10, color: '#aaa', textDecoration: 'line-through', marginTop: 2 }}>MRP ₹{item.price}</div>
@@ -162,7 +164,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
                   </td>
                   <td style={{ padding: '10px 8px', fontSize: 12, fontWeight: 600, textAlign: 'center', verticalAlign: 'top' }}>{formatQuantityDisplay(normalized.quantity, normalized.unit, normalized.unit_type)}</td>
                   <td style={{ padding: '10px 8px', fontSize: 12, fontWeight: 600, textAlign: 'right', verticalAlign: 'top', color: '#555' }}>{formatCurrency(normalized.base_price)}</td>
-                  <td style={{ padding: '10px 8px', fontSize: 13, fontWeight: 800, textAlign: 'right', verticalAlign: 'top', color: '#1a1a2e' }}>{formatCurrency(normalized.line_total)}</td>
+                  <td style={{ padding: '10px 8px', fontSize: 13, fontWeight: 800, textAlign: 'right', verticalAlign: 'top', color: '#0A0A0A' }}>{formatCurrency(normalized.line_total)}</td>
                 </tr>
               )
             })}
@@ -171,7 +173,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
       </div>
 
       {/* ── TOTALS ───────────────────────────────────────────────── */}
-      <div style={{ marginTop: 24, borderTop: '2px solid #E8547C', paddingTop: 16 }}>
+      <div style={{ marginTop: 24, borderTop: '2px solid #D4AF37', paddingTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ minWidth: 240, width: '100%', maxWidth: 300 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -180,16 +182,16 @@ export const Invoice: React.FC<InvoiceProps> = ({
             </div>
             {discountAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: '#E8547C' }}>
+                <span style={{ fontSize: 12, color: '#B48811' }}>
                   Coupon{couponCode ? ` (${couponCode})` : ''}
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#E8547C' }}>−{formatCurrency(discountAmount)}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#B48811' }}>−{formatCurrency(discountAmount)}</span>
               </div>
             )}
             {manualDiscountAmount > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: '#E8547C' }}>Manual Discount</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#E8547C' }}>−{formatCurrency(manualDiscountAmount)}</span>
+                <span style={{ fontSize: 12, color: '#B48811' }}>Manual Discount</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#B48811' }}>−{formatCurrency(manualDiscountAmount)}</span>
               </div>
             )}
             {gstAmount > 0 && (
@@ -204,20 +206,14 @@ export const Invoice: React.FC<InvoiceProps> = ({
                 <span style={{ fontSize: 12, fontWeight: 700 }}>{formatCurrency(effectiveDelivery)}</span>
               </div>
             )}
-            {effectiveDelivery === 0 && discountAmount === 0 && manualDiscountAmount === 0 && gstAmount === 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: '#666' }}>Delivery</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#E8547C' }}>FREE</span>
-              </div>
-            )}
             <div
               style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderTop: '2px solid #E8547C', paddingTop: 10, marginTop: 4,
+                borderTop: '2px solid #D4AF37', paddingTop: 10, marginTop: 4,
               }}
             >
-              <span style={{ fontSize: 15, fontWeight: 900, color: '#E8547C', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total</span>
-              <span style={{ fontSize: 20, fontWeight: 900, color: '#E8547C' }}>{formatCurrency(total)}</span>
+              <span style={{ fontSize: 15, fontWeight: 900, color: '#0A0A0A', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: '#0A0A0A' }}>{formatCurrency(total)}</span>
             </div>
           </div>
         </div>
@@ -230,7 +226,8 @@ export const Invoice: React.FC<InvoiceProps> = ({
           display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#E8547C' }}>Thank you for shopping!</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#0A0A0A' }}>Thank you for shopping at CLAD!</div>
+        <div style={{ fontSize: 10, color: '#777', marginTop: 2 }}>Follow us on Instagram: @{BRAND_INSTAGRAM}</div>
         {onPrintReceipt && (
           <button
             type="button"
@@ -238,15 +235,15 @@ export const Invoice: React.FC<InvoiceProps> = ({
             className="print:hidden"
             style={{
               marginTop: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              border: 0, borderRadius: 999, padding: '9px 18px',
-              background: '#E8547C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              border: '1px solid #D4AF37', borderRadius: 999, padding: '9px 20px',
+              background: '#0A0A0A', color: '#D4AF37', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}
           >
-            Print Receipt
+            Print Thermal Receipt
           </button>
         )}
       </div>
     </div>
   )
 }
-

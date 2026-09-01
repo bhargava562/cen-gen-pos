@@ -1,4 +1,4 @@
-import { BRAND_ADDRESS, BRAND_EN, BRAND_LOGO, BRAND_WHATSAPP } from './brand'
+import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_INSTAGRAM, BRAND_LOGO, BRAND_PRIMARY_PHONE_DISPLAY } from './brand'
 import { formatCurrency, formatInvoiceNo } from './retail'
 
 export interface ThermalReceiptData {
@@ -22,6 +22,7 @@ export interface ThermalReceiptData {
   storeName?: string
   storePhone?: string
   storeAddress?: string
+  storeEmail?: string
 }
 
 export function printThermalReceipt(data: ThermalReceiptData) {
@@ -68,6 +69,7 @@ export function printThermalReceipt(data: ThermalReceiptData) {
           .font-bold { font-weight: bold; }
           .mb-1 { margin-bottom: 4px; }
           .mb-2 { margin-bottom: 8px; }
+          .mt-1 { margin-top: 4px; }
           .mt-2 { margin-top: 8px; }
           .border-bottom { border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 4px; }
           .border-top { border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; }
@@ -78,10 +80,11 @@ export function printThermalReceipt(data: ThermalReceiptData) {
       </head>
       <body>
         <div class="text-center mb-2">
-          <div style="margin-bottom: 6px;"><img src="${BRAND_LOGO}" alt="${BRAND_EN}" style="width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto; border-radius: 8px;" /></div>
-          <div class="font-bold" style="font-size: 16px;">${data.storeName || BRAND_EN}</div>
-          <div style="font-size: 11px; margin-top: 2px;">${data.storeAddress || BRAND_ADDRESS}</div>
-          <div class="mt-2" style="font-size: 11px;">Ph: ${data.storePhone || BRAND_WHATSAPP}</div>
+          <div style="margin-bottom: 6px;"><img src="${BRAND_LOGO}" alt="${BRAND_EN}" style="width: 80px; height: 30px; object-fit: contain; display: block; margin: 0 auto;" /></div>
+          <div class="font-bold" style="font-size: 16px; letter-spacing: 2px;">${data.storeName || BRAND_EN}</div>
+          <div style="font-size: 10px; margin-top: 2px;">${data.storeAddress || BRAND_ADDRESS}</div>
+          <div class="mt-1" style="font-size: 10px;">Ph: ${data.storePhone || BRAND_PRIMARY_PHONE_DISPLAY}</div>
+          <div style="font-size: 9px; color: #333;">${data.storeEmail || BRAND_EMAIL} | Insta: @${BRAND_INSTAGRAM}</div>
         </div>
 
         <div class="border-bottom border-top" style="font-size: 11px;">
@@ -157,8 +160,8 @@ export function printThermalReceipt(data: ThermalReceiptData) {
         </div>
 
         <div class="text-center mt-2" style="font-size: 11px;">
-          <div class="font-bold">Thank you for visiting!</div>
-          <div>Visit again</div>
+          <div class="font-bold">Thank you for shopping at CLAD!</div>
+          <div>Follow us on Instagram: @${BRAND_INSTAGRAM}</div>
         </div>
       </body>
     </html>

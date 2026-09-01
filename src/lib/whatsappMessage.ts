@@ -1,4 +1,5 @@
 import { formatInvoiceNo } from './retail'
+import { BRAND_EN, BRAND_INSTAGRAM, BRAND_INSTAGRAM_URL, BRAND_PRIMARY_PHONE_DISPLAY } from './brand'
 
 export type WhatsAppLineItem = {
   name: string
@@ -41,7 +42,7 @@ export const publicInvoiceUrl = (invoiceNumber: string) => {
   const origin =
     typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost')
       ? window.location.origin
-      : 'https://sreejas-bridal-botique.vercel.app'
+      : 'https://clad.vercel.app'
   return `${origin}/invoice/${encodeURIComponent(formatted)}`
 }
 
@@ -53,12 +54,12 @@ export const buildProfessionalWhatsAppMessage = (input: BuildWhatsAppMessageInpu
     ? input.items.map(item => `• ${item.name} (x${item.qty}) - ₹ ${Number(item.lineTotal || 0).toFixed(2)}`).join('\n')
     : ''
 
-  return `✨ *SREEJA'S BRIDAL BOUTIQUE* ✨
-💖 *Official Purchase Invoice & Receipt* 💖
+  return `✨ *${BRAND_EN}* ✨
+🛍️ *Official Purchase Invoice & Receipt* 🛍️
 
 Dear ${customerName},
 
-Thank you for shopping with Sreeja's Bridal Boutique! We truly appreciate your order.
+Thank you for shopping at ${BRAND_EN}! We truly appreciate your patronage.
 
 🧾 *INVOICE DETAILS*
 📌 *Invoice No:* #${formattedNo}
@@ -66,13 +67,10 @@ ${input.invoiceDate ? `📅 *Date:* ${new Date(input.invoiceDate).toLocaleDateSt
 ${itemsText ? `📦 *ITEMS ORDERED:*\n${itemsText}\n\n` : ''}📄 *View & Download Digital Invoice / PDF:*
 👉 ${invoiceUrl}
 
-💖 Thank you, and we hope to see you again soon!
+📞 *Shop Contact:* ${BRAND_PRIMARY_PHONE_DISPLAY}
+📷 *Follow us on Instagram:* ${BRAND_INSTAGRAM_URL}
 
-Follow us on Instagram:
-https://www.instagram.com/sreejas_bridal_boutique?igsh=b2pqdWE3eGh1cmsw
-
-Review us on Google:
-https://www.google.com/search?sca_esv=2e6c317c12a55098&hl=en-GB&rlz=1CDGOYI_enIN1040IN1042&cs=1&output=search&kgmid=/g/11mkxl_2wy&q=Sreeja%27s+Bridal+Boutique&shem=epsd1,ltae,rimspwouoe&shndl=30&source=sh/x/loc/hdr/m1/3&kgs=2a74f979cbe4d39e&utm_source=epsd1,ltae,rimspwouoe,sh/x/loc/hdr/m1/3#ebo=0&sbfbu=1&pi=Sreeja’s%20Bridal%20Boutique%20Kakinada`
+Thank you, and visit us again! ✨`
 }
 
 export const buildAdvanceDepositWhatsAppMessage = (input: AdvanceDepositWhatsAppInput) => {
@@ -91,27 +89,22 @@ export const buildAdvanceDepositWhatsAppMessage = (input: AdvanceDepositWhatsApp
       })()
     : '-'
 
-  return `💖 Thank You for Your Advance Order with Sreeja's Bridal Boutique! 💖
+  return `✨ *Thank You for Your Advance Order with ${BRAND_EN}!* ✨
 
 Dear ${customerName},
 
-✨ Thank you for choosing Sreeja's Bridal Boutique. We have successfully received your initial advance payment!
+We have successfully received your initial advance payment!
 
-🧾 Advance Deposit Details 👇
-📦 Deposit ID: ${input.depositId}
-👗 Product: ${input.productName}
+🧾 *Advance Order Details* 👇
+📦 Deposit ID: #${input.depositId}
+👔 Product: ${input.productName}
 💵 Total Order Amount: ₹${input.totalAmount}
 💰 Advance Paid: ₹${input.depositAmount}${input.paymentMethod ? ` (${input.paymentMethod.toLowerCase() === 'upi' ? 'QR' : input.paymentMethod.toUpperCase()})` : ''}
 🔴 Balance to Pay on Delivery: ₹${input.remainingBalance}
 📅 Expected Delivery Date: ${deliveryDateFormatted}
 
-.
+Your garments are being prepared with utmost care. We will have everything ready on or before ${deliveryDateFormatted}!
 
-✂️ Tailoring & preparation for your clothes is now underway. We will have everything ready on or before ${deliveryDateFormatted} for final payment and delivery/pickup!
-
-.
-
-💖 Thank you for paying the initial amount as advance!`
+📞 *Shop Contact:* ${BRAND_PRIMARY_PHONE_DISPLAY}
+📷 *Instagram:* @${BRAND_INSTAGRAM}`
 }
-
-export const BUSINESS_PHONE = '917285919381'

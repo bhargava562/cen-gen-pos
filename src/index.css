@@ -2,14 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
+  :root {
+    --brand-black: #0A0A0A;
+    --brand-black-surface: #141414;
+    --brand-gold: #D4AF37;
+    --brand-gold-hover: #C5A059;
+    --brand-gold-light: #FBF6E9;
+    --brand-gold-border: #E8D399;
+    --brand-surface: #FBFAF6;
+    --brand-text-dark: #111111;
+    --brand-text-muted: #6B7280;
+  }
+
   * { box-sizing: border-box; }
   html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: #C73660;
+    background-color: #0A0A0A;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     touch-action: manipulation;
@@ -21,13 +32,11 @@
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: #C73660;
+    background-color: #FBFAF6;
     background-image:
-      radial-gradient(circle at top left, rgba(232, 84, 124, 0.06), transparent 34%),
-      radial-gradient(circle at top right, rgba(232, 84, 124, 0.05), transparent 28%);
+      radial-gradient(circle at top left, rgba(212, 175, 55, 0.06), transparent 34%),
+      radial-gradient(circle at top right, rgba(10, 10, 10, 0.04), transparent 28%);
     color: #111111;
-    /* Noto Sans Tamil listed second so Latin text uses Inter but Tamil falls
-       back to the correct Tamil-capable font without reordering glyphs. */
     font-family: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
@@ -43,22 +52,14 @@
     display: block;
   }
   h1, h2, h3, h4, h5, h6 {
-    /* Poppins for Latin headings; Noto Sans Tamil for any Tamil heading text */
-    font-family: 'Poppins', 'Noto Sans Tamil', system-ui, sans-serif;
+    font-family: 'Montserrat', 'Poppins', 'Noto Sans Tamil', system-ui, sans-serif;
   }
 
-  /* ── Tamil script typography fixes ────────────────────────────
-     Tamil characters extend above and below the baseline more than
-     Latin glyphs. Without a generous line-height they clip.
-     The .ta-text utility class is applied to Tamil text nodes. */
   .ta-text {
     font-family: 'Noto Sans Tamil', system-ui, sans-serif;
     line-height: 1.75;
-    /* Prevent over-tight tracking from crushing Tamil conjuncts */
     letter-spacing: 0;
   }
-  /* Generic fallback: any element containing Tamil Unicode block text
-     will inherit relaxed line-height through the cascade. */
   [lang="ta"], :lang(ta) {
     font-family: 'Noto Sans Tamil', system-ui, sans-serif;
     line-height: 1.75;
@@ -67,22 +68,20 @@
 }
 
 @layer components {
-  /* Touch-friendly button targets for mobile */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
   }
 
-  /* Consistent soft shadow for cards */
   .shadow-soft {
-    box-shadow: 0 10px 28px rgba(44, 57, 42, 0.08);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
   }
 
   .surface-panel {
-    @apply rounded-card border border-borderLight bg-cardBg shadow-soft;
+    @apply rounded-2xl border border-[#E8D399]/40 bg-white shadow-soft;
   }
 
   .surface-panel-compact {
-    @apply rounded-card border border-borderLight bg-cardBg shadow-soft;
+    @apply rounded-xl border border-[#E8D399]/40 bg-white shadow-soft;
   }
 
   .mobile-chip {
@@ -90,24 +89,23 @@
   }
 
   .mobile-cta-bar {
-    @apply border-t border-[#FDE2E9]/50 bg-white/95 backdrop-blur pb-[calc(env(safe-area-inset-bottom)+0.75rem)];
+    @apply border-t border-[#E8D399]/50 bg-white/95 backdrop-blur pb-[calc(env(safe-area-inset-bottom)+0.75rem)];
   }
 
   .mobile-section-title {
-    @apply text-[11px] font-black uppercase tracking-[0.24em] text-[#E8547C];
+    @apply text-[11px] font-black uppercase tracking-[0.24em] text-[#B48811];
   }
 
   .mobile-page-shell {
-    @apply bg-[#fbfaf6] min-h-screen;
+    @apply bg-[#FBFAF6] min-h-screen;
   }
 
-  /* Consistent button styles */
   .btn-primary {
-    @apply px-6 py-3 rounded-btn bg-maroon-dark text-white font-bold hover:bg-maroon transition-colors;
+    @apply px-6 py-3 rounded-xl bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] font-bold hover:bg-[#1A1A1A] transition-all;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 rounded-btn border border-borderLight bg-white text-textMain font-bold hover:bg-gray-50 transition-colors;
+    @apply px-6 py-3 rounded-xl border border-[#E8D399] bg-white text-[#111111] font-bold hover:bg-gray-50 transition-colors;
   }
 
   .btn-small {
@@ -119,19 +117,16 @@
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  /* Glassmorphism nav */
   .glass {
     background: rgba(255, 255, 255, 0.92) !important;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
 
-  /* Keep app surfaces on the warm admin theme used by the sidebar */
   .bg-bgMain { background-color: #FBFAF6 !important; }
   .bg-cardBg  { background-color: #FFFFFF !important; }
 }
 
-/* Global background override */
 #root {
   margin: 0;
   padding: 0;
@@ -141,10 +136,9 @@
   max-width: 100vw;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(139, 28, 49, 0.05), transparent 30%),
+    radial-gradient(circle at top left, rgba(212, 175, 55, 0.05), transparent 30%),
     #FBFAF6;
 }
-
 
 /* ── PRINT STYLES — A4 invoice ─────────────────────────── */
 @media print {
@@ -164,13 +158,11 @@
     color: #000 !important;
   }
 
-  /* Everything with print:hidden Tailwind class or legacy class */
   .print\:hidden,
   .print-hidden,
   nav,
   footer { display: none !important; }
 
-  /* Invoice fills full page width */
   #invoice-print-root {
     width: 100% !important;
     max-width: 100% !important;
@@ -182,13 +174,11 @@
     min-height: 0 !important;
   }
 
-  /* Preserve background colors (green header, badges) */
   #invoice-print-root * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Outer wrapper containers — transparent so invoice fills cleanly */
   .bg-bgMain {
     background: #fff !important;
     padding: 0 !important;

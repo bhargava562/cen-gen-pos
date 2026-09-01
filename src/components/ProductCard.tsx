@@ -91,7 +91,7 @@ export default function ProductCard({ product }: { product: Product }) {
         whileTap={{ scale: 0.95 }}
         onClick={(e) => { e.stopPropagation(); void toggle(product) }}
         className={`absolute right-1.5 top-1.5 z-10 hidden xl:flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-          fav ? 'border-rose-200 bg-rose-50' : 'border-[#FDE2E9] bg-white/90'
+          fav ? 'border-rose-200 bg-rose-50' : 'border-[#E5E7EB] bg-white/90'
         }`}
         type="button"
         aria-label={fav ? 'Remove from favourites' : 'Add to favourites'}

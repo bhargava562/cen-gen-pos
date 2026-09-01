@@ -111,7 +111,7 @@ export async function createVariant(input: VariantInput): Promise<{ data: Produc
       purchase_price: input.purchasePrice ?? null,
       mrp:          input.mrp ?? null,
       price:        input.price,
-      stock:        input.stock,
+      stock:        input.stock ?? 0,
       is_default:   input.isDefault ?? false,
       sort_order:   input.sortOrder ?? 0,
       image_url:    input.imageUrl ?? null,

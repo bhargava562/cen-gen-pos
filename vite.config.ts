@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: [
-        'sreeja-bridal-boutique-logo.jpeg',
+        'clad-logo.svg',
         'pwa-192x192.png',
         'pwa-512x512.png',
         'maskable-icon-512x512.png',
@@ -18,10 +18,10 @@ export default defineConfig({
         'robots.txt',
       ],
       manifest: {
-        name: 'Sreeja Boutique',
-        short_name: 'Sreeja Boutique',
-        description: "Sreeja's Bridal Boutique billing, catalog, coupon, order, receipt, and invoice administration.",
-        theme_color: '#C73660',
+        name: 'CLAD Retail POS',
+        short_name: 'CLAD',
+        description: 'CLAD retail billing, barcode inventory, catalog, order, receipt, and invoice administration.',
+        theme_color: '#0A0A0A',
         background_color: '#FBFAF6',
         display: 'standalone',
         orientation: 'any',
@@ -58,7 +58,11 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: 'NetworkOnly',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 3,
+            },
           },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -93,6 +97,7 @@ export default defineConfig({
           if (id.includes('recharts') || id.includes('d3-') || id.includes('react-smooth') || id.includes('victory-')) return 'charts'
           if (id.includes('react-router')) return 'router'
           if (id.includes('lucide-react')) return 'icons'
+          if (id.includes('jsbarcode') || id.includes('@zxing')) return 'barcode'
           if (id.includes('workbox') || id.includes('vite-plugin-pwa')) return 'pwa'
           return 'vendor'
         },
@@ -109,7 +114,7 @@ export default defineConfig({
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
     },
   },
 })

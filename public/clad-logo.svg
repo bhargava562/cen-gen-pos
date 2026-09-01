@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cladGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E5C158" />
+      <stop offset="50%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#AA820A" />
+    </linearGradient>
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#D4AF37" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded pill -->
+  <rect x="5" y="5" width="390" height="110" rx="16" fill="#0A0A0A" stroke="url(#cladGoldGrad)" stroke-width="1.5" />
+
+  <!-- Monogram emblem on left -->
+  <g transform="translate(30, 20)">
+    <polygon points="40,5 75,25 75,65 40,85 5,65 5,25" fill="#141414" stroke="url(#cladGoldGrad)" stroke-width="2"/>
+    <text x="40" y="56" font-family="'Cinzel', 'Playfair Display', 'Times New Roman', serif" font-size="34" font-weight="900" fill="url(#cladGoldGrad)" text-anchor="middle" letter-spacing="1">C</text>
+  </g>
+
+  <!-- Brand Typography -->
+  <!-- CLAD main title -->
+  <text x="130" y="66" font-family="'Cinzel', 'Montserrat', 'Inter', 'Helvetica Neue', sans-serif" font-size="44" font-weight="900" letter-spacing="8" fill="url(#cladGoldGrad)" filter="url(#goldGlow)">CLAD</text>
+
+  <!-- Subtitle -->
+  <text x="132" y="90" font-family="'Montserrat', 'Inter', sans-serif" font-size="11" font-weight="600" letter-spacing="4" fill="#E8D399" text-transform="uppercase">MEN'S &amp; WOMEN'S WEAR</text>
+  
+  <!-- Location accent tag -->
+  <text x="365" y="90" font-family="'Montserrat', 'Inter', sans-serif" font-size="9" font-weight="500" letter-spacing="1.5" fill="#888888" text-anchor="end">MANAPPARAI</text>
+</svg>

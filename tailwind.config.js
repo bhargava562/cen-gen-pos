@@ -7,22 +7,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        bgMain:    '#FFF8F9',
+        bgMain:    '#FBFAF6', // Warm luxury linen surface
         cardBg:    '#FFFFFF',
+        brand: {
+          black:      '#0A0A0A',
+          dark:       '#141414',
+          gold:       '#D4AF37',
+          goldHover:  '#C5A059',
+          goldLight:  '#FBF6E9',
+          goldBorder: '#E8D399',
+        },
+        gold: {
+          DEFAULT: '#D4AF37',
+          dark:    '#B48811',
+          light:   '#FBF6E9',
+          border:  '#E8D399',
+        },
         maroon: {
-          DEFAULT: '#E8547C', // Flamingo Pink
-          dark: '#C73660', // Deep Flamingo
+          DEFAULT: '#D4AF37', // Remapped to luxury Gold
+          dark:    '#0A0A0A', // Remapped to luxury Black
+          light:   '#FBF6E9',
         },
         textMain:  '#111111',
         textMuted: '#6B7280',
-        borderLight: '#FDE2E9', // Light Pink
+        borderLight: '#E5E7EB', // Neutral clean border
       },
       fontFamily: {
         sans:      ['Inter', 'sans-serif'],
-        headline:  ['Inter', 'sans-serif'],
+        headline:  ['Montserrat', 'Poppins', 'sans-serif'],
       },
       boxShadow: {
         soft:   '0 1px 3px rgba(0,0,0,0.05)',
+        gold:   '0 4px 20px -2px rgba(212, 175, 55, 0.25)',
       },
       borderRadius: {
         'card': '12px',

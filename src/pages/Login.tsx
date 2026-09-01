@@ -3,7 +3,7 @@
  */
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Leaf, Mail, ArrowLeft, CheckCircle, User, Phone as PhoneIcon } from 'lucide-react'
+import { Mail, ArrowLeft, CheckCircle, User, Phone as PhoneIcon } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { BRAND_EN, BRAND_TA, BRAND_LOGO } from '../lib/brand'
 import { isValidPhone, getSubscriberDigits } from '../lib/phone'
@@ -184,7 +184,7 @@ export default function Login() {
               type="button"
               onClick={handleGoogle}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#FDE2E9] hover:border-sageDark text-textMain font-bold py-3.5 rounded-xl transition-all disabled:opacity-60 shadow-sm hover:shadow-md active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#E5E7EB] hover:border-sageDark text-textMain font-bold py-3.5 rounded-xl transition-all disabled:opacity-60 shadow-sm hover:shadow-md active:scale-[0.98]"
             >
               {googleLoading ? <Spinner /> : <GoogleIcon size={20} />}
               {googleLoading ? l('Redirecting to Google…','Google க்கு செல்கிறது...') : l('Continue with Google','Google மூலம் தொடர')}

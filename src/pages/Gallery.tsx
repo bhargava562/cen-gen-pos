@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, X, ZoomIn } from 'lucide-react'
 import { galleryImages, type GalleryImage } from '../data/galleryImages'
+import { BRAND_EN } from '../lib/brand'
 
 // ── Lightbox ────────────────────────────────────────────────────────────────
 function Lightbox({
@@ -169,14 +170,14 @@ export default function Gallery() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#E8547C] mb-4">
-            Sreeja's Bridal Boutique
+          <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#D4AF37] mb-4">
+            {BRAND_EN}
           </p>
           <h1 className="text-[2.8rem] sm:text-[3.6rem] font-black text-[#111111] tracking-tight leading-[1.02] mb-4">
             Inside Our Store
           </h1>
-          <p className="text-[16px] sm:text-[18px] font-black text-[#E8547C] mb-4">
-            Serving Chennai Since 1945
+          <p className="text-[14px] sm:text-[16px] font-bold text-[#B48811] mb-4">
+            Manapparai, Trichy
           </p>
           <p className="text-[15px] text-[#374151] font-medium leading-[1.7] max-w-lg mx-auto">
             Explore our traditional herbal and pooja store through real photographs
@@ -218,7 +219,7 @@ export default function Gallery() {
               <div className="relative overflow-hidden rounded-[20px] sm:rounded-[24px]
                 shadow-[0_6px_24px_rgba(44,57,42,0.10)]
                 hover:shadow-[0_16px_44px_rgba(44,57,42,0.18)]
-                transition-shadow duration-300 bg-[#FDE2E9]/20">
+                transition-shadow duration-300 bg-[#E5E7EB]/20">
                 <img
                   src={img.image}
                   alt={img.title}
