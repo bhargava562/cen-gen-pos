@@ -1,17 +1,40 @@
-import React, { useState, useEffect } from 'react'
-import { X, QrCode, Plus, CheckCircle, AlertCircle, Printer, RefreshCw } from 'lucide-react'
-import { barcodeService, type CreateBarcodeResponse } from '../../services/barcodeService'
-import { fetchVariantsByProduct, createVariant, type ProductVariant } from '../../services/variantService'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  X,
+  Settings,
+  Plus,
+  Trash2,
+  Printer,
+  Sparkles,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  ChevronDown,
+} from 'lucide-react'
+import {
+  type BarcodeQueueItem,
+  type BarcodeSettings,
+  type LabelSizeConfig,
+  getStoredBarcodeSettings,
+  getAllLabelSizes,
+  renderBarcodeSvg,
+} from '../../lib/barcode'
 import { BRAND_EN } from '../../lib/brand'
-import { BarcodePrintModal } from './BarcodePrintModal'
+import { barcodeService } from '../../services/barcodeService'
+import { fetchVariantsByProduct, type ProductVariant } from '../../services/variantService'
+import { BarcodeSettingsDrawer } from './BarcodeSettingsDrawer'
+import { QuickAddItemModal } from './QuickAddItemModal'
+import { BarcodeSheetPreviewModal } from './BarcodeSheetPreviewModal'
 
 interface ProductOption {
   id: number
   name: string
   price: number
-  offer_price?: number
+  cost_price?: number
   barcode?: string
   stock_quantity?: number
+  category?: string
+  has_variants?: boolean
 }
 
 export interface CreateBarcodeModalProps {
@@ -31,452 +54,948 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
   preselectedVariantId,
   onSuccess,
 }) => {
-  const [selectedProductId, setSelectedProductId] = useState<number | ''>(preselectedProductId || '')
+  // Settings
+  const [settings, setSettings] = useState<BarcodeSettings>(getStoredBarcodeSettings())
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false)
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [showSheetPreviewModal, setShowSheetPreviewModal] = useState(false)
+
+  // Current Form State (Left Column)
+  const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null)
+  const [productSearch, setProductSearch] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
   const [variants, setVariants] = useState<ProductVariant[]>([])
-  const [loadingVariants, setLoadingVariants] = useState(false)
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
 
-  // 'existing' | 'new' | 'none'
-  const [variantMode, setVariantMode] = useState<'existing' | 'new' | 'none'>('existing')
-  const [selectedVariantId, setSelectedVariantId] = useState<string>(preselectedVariantId || '')
-  const [newVariantName, setNewVariantName] = useState('')
-  const [newVariantPrice, setNewVariantPrice] = useState<string>('')
+  const [itemCode, setItemCode] = useState('')
+  const [noOfLabels, setNoOfLabels] = useState<number>(2)
+  const [header, setHeader] = useState(BRAND_EN)
+  const [line1, setLine1] = useState('')
+  const [line2, setLine2] = useState('')
+  const [line3, setLine3] = useState('Discount: 0%')
+  const [line4, setLine4] = useState('')
 
-  const [quantity, setQuantity] = useState<number>(20)
-  const [unitCost, setUnitCost] = useState<string>('')
-  const [note, setNote] = useState('')
-  const [customBarcode, setCustomBarcode] = useState('')
+  // Queue of items to generate (Bottom Table)
+  const [queue, setQueue] = useState<BarcodeQueueItem[]>([])
 
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [result, setResult] = useState<CreateBarcodeResponse | null>(null)
-  const [showPrintModal, setShowPrintModal] = useState(false)
+  // Submission & Status
+  const [generating, setGenerating] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Load variants whenever selected product changes
-  useEffect(() => {
-    if (!selectedProductId) {
-      setVariants([])
-      return
-    }
+  // Preview SVG Ref
+  const previewSvgRef = useRef<SVGSVGElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-    let isMounted = true
-    setLoadingVariants(true)
+  const selectProductItem = useCallback(async (prod: ProductOption, targetVariantId?: string | null) => {
+    setSelectedProduct(prod)
+    setProductSearch(prod.name)
+    setDropdownOpen(false)
 
-    fetchVariantsByProduct(String(selectedProductId))
-      .then((vars) => {
-        if (isMounted) {
-          setVariants(vars)
-          if (vars.length > 0) {
-            setVariantMode('existing')
-            if (!selectedVariantId && vars[0]) {
-              setSelectedVariantId(vars[0].id)
-            }
-          } else {
-            setVariantMode('none')
-            setSelectedVariantId('')
+    // Set default item code (product barcode or generate new code)
+    const code = prod.barcode || `CLAD${Math.floor(1000000 + Math.random() * 9000000)}`
+    setItemCode(code)
+    setLine1(prod.name)
+    setLine2(prod.category || '')
+    setLine3(settings.showDiscount ? 'Discount: 0%' : `Price: ₹${prod.price}`)
+
+    // Fetch variants if applicable
+    if (prod.has_variants) {
+      try {
+        const vars = await fetchVariantsByProduct(String(prod.id))
+        setVariants(vars)
+        if (vars.length > 0) {
+          const matched = targetVariantId ? vars.find(v => v.id === targetVariantId) : vars[0]
+          const chosen = matched || vars[0]
+          setSelectedVariant(chosen)
+          if (chosen.barcode) setItemCode(chosen.barcode)
+          setLine2(`Size: ${chosen.variantName}`)
+          if (chosen.price) {
+            setLine3(settings.showDiscount ? 'Discount: 0%' : `Price: ₹${chosen.price}`)
           }
         }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch variants:', err)
-      })
-      .finally(() => {
-        if (isMounted) setLoadingVariants(false)
-      })
-
-    return () => {
-      isMounted = false
+      } catch (err) {
+        console.error('Failed to load variants:', err)
+      }
+    } else {
+      setVariants([])
+      setSelectedVariant(null)
     }
-  }, [selectedProductId])
+  }, [settings.showDiscount])
+
+  // Initialize with preselected product if passed
+  useEffect(() => {
+    if (preselectedProductId) {
+      const found = products.find((p) => p.id === preselectedProductId)
+      if (found) {
+        void selectProductItem(found, preselectedVariantId)
+      }
+    }
+  }, [preselectedProductId, preselectedVariantId, products, selectProductItem])
+
+  // Handle clicking outside the dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Update live preview SVG
+  useEffect(() => {
+    if (previewSvgRef.current && itemCode) {
+      renderBarcodeSvg(previewSvgRef.current, itemCode, {
+        width: 1.4,
+        height: 32,
+        fontSize: 10,
+        displayValue: false,
+        margin: 2,
+      })
+    }
+  }, [itemCode, header, line1, line2, line3, line4])
 
   if (!isOpen) return null
 
-  const selectedProduct = products.find((p) => p.id === Number(selectedProductId))
-  const selectedVariant = variants.find((v) => v.id === selectedVariantId)
+  const allSizes = getAllLabelSizes()
+  const currentSizeConfig: LabelSizeConfig =
+    allSizes.find((s) => s.id === settings.selectedSizeId) || allSizes[0]
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!selectedProductId) {
-      setError('Please select a product')
-      return
-    }
-
-    if (quantity <= 0) {
-      setError('Quantity received must be greater than 0')
-      return
-    }
-
-    setSubmitting(true)
-
-    try {
-      let finalVariantId: string | null = null
-
-      // If user is creating a new variant on the fly
-      if (variantMode === 'new') {
-        const trimmedName = newVariantName.trim()
-        if (!trimmedName) {
-          throw new Error('Please enter a variant / SKU name (e.g. M, 42, Red, 500ml)')
-        }
-
-        const price = newVariantPrice ? parseFloat(newVariantPrice) : (selectedProduct?.price || 0)
-
-        // Create variant with stock = 0
-        const { data: createdVar, error: varErr } = await createVariant({
-          productId: String(selectedProductId),
-          variantName: trimmedName,
-          price: price,
-          stock: 0, // Stock will be added in barcode receiving transaction
-        })
-
-        if (varErr || !createdVar) {
-          throw new Error(varErr || 'Failed to create new variant')
-        }
-
-        finalVariantId = createdVar.id
-      } else if (variantMode === 'existing' && selectedVariantId) {
-        finalVariantId = selectedVariantId
-      }
-
-      // Execute atomic barcode receiving transaction
-      const response = await barcodeService.receiveStockWithBarcode({
-        product_id: Number(selectedProductId),
-        variant_id: finalVariantId,
-        quantity_received: quantity,
-        unit_cost: unitCost ? parseFloat(unitCost) : null,
-        note: note.trim() || undefined,
-        custom_barcode: customBarcode.trim() || undefined,
-        created_by_name: 'Admin',
-      })
-
-      setResult(response)
-      onSuccess?.()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unexpected error occurred'
-      setError(msg)
-    } finally {
-      setSubmitting(false)
+  const handleSelectVariant = (varId: string) => {
+    const v = variants.find((item) => item.id === varId)
+    if (!v) return
+    setSelectedVariant(v)
+    if (v.barcode) setItemCode(v.barcode)
+    setLine2(`Size: ${v.variantName}`)
+    if (v.price) {
+      setLine3(settings.showDiscount ? 'Discount: 0%' : `Price: ₹${v.price}`)
     }
   }
 
-  const handleResetAndClose = () => {
-    setResult(null)
-    setError('')
-    onClose()
+  const handleAssignCode = () => {
+    const generated = 'CLAD' + Math.floor(1000000 + Math.random() * 9000000)
+    setItemCode(generated)
+  }
+
+  const handleAddToQueue = () => {
+    if (!selectedProduct) {
+      setStatusMessage({ type: 'error', text: 'Please select an item first' })
+      return
+    }
+
+    if (!itemCode.trim()) {
+      setStatusMessage({ type: 'error', text: 'Item Code / Barcode is required' })
+      return
+    }
+
+    if (noOfLabels <= 0) {
+      setStatusMessage({ type: 'error', text: 'Number of labels must be at least 1' })
+      return
+    }
+
+    const newItem: BarcodeQueueItem = {
+      id: `queue_${Date.now()}_${Math.random()}`,
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      variantId: selectedVariant?.id || null,
+      variantName: selectedVariant?.variantName || undefined,
+      barcodeValue: itemCode.trim(),
+      price: selectedVariant?.price || selectedProduct.price,
+      costPrice: selectedProduct.cost_price || 0,
+      noOfLabels,
+      header: header.trim(),
+      line1: line1.trim(),
+      line2: line2.trim(),
+      line3: line3.trim(),
+      line4: line4.trim(),
+      selected: true,
+    }
+
+    setQueue((prev) => [...prev, newItem])
+    setStatusMessage(null)
+
+    // Reset some inputs for rapid entry
+    setNoOfLabels(2)
+  }
+
+  const handleRemoveQueueItem = (id: string) => {
+    setQueue((prev) => prev.filter((it) => it.id !== id))
+  }
+
+  const handleUpdateQueueItem = (
+    id: string,
+    field: keyof BarcodeQueueItem,
+    value: string | number | boolean
+  ) => {
+    setQueue((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+    )
+  }
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    setQueue((prev) => prev.map((it) => ({ ...it, selected: checked })))
+  }
+
+  const totalLabelsNeeded = queue
+    .filter((it) => it.selected)
+    .reduce((sum, it) => sum + (it.noOfLabels || 0), 0)
+
+  const handleGenerateAndCommitStock = async () => {
+    const selectedItems = queue.filter((it) => it.selected)
+    if (selectedItems.length === 0) {
+      setStatusMessage({ type: 'error', text: 'Please add and select at least one item to generate barcodes' })
+      return
+    }
+
+    setGenerating(true)
+    setStatusMessage(null)
+
+    try {
+      // Process all queued items sequentially or in parallel
+      for (const item of selectedItems) {
+        await barcodeService.receiveStockWithBarcode({
+          product_id: item.productId,
+          variant_id: item.variantId || null,
+          quantity_received: item.noOfLabels,
+          unit_cost: item.costPrice || null,
+          custom_barcode: item.barcodeValue,
+          note: `Received via Barcode Generator (${item.noOfLabels} labels)`,
+          created_by_name: 'Admin',
+        })
+      }
+
+      setStatusMessage({
+        type: 'success',
+        text: `Successfully generated barcodes & added stock for ${selectedItems.length} items (${totalLabelsNeeded} total units)!`,
+      })
+
+      onSuccess?.()
+      setShowSheetPreviewModal(true)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to receive stock with barcodes'
+      setStatusMessage({ type: 'error', text: msg })
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // Filter products for searchable dropdown
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (p.barcode && p.barcode.toLowerCase().includes(productSearch.toLowerCase()))
+  )
+
+  const printQueueDirectly = () => {
+    const selectedItems = queue.filter((it) => it.selected)
+    if (selectedItems.length === 0) return
+
+    // Build printable HTML sheet for thermal / regular printer
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+
+    const labelsHtml: string[] = []
+    selectedItems.forEach((item) => {
+      const count = Math.max(1, item.noOfLabels)
+      for (let i = 0; i < count; i++) {
+        labelsHtml.push(`
+          <div class="label-sticker">
+            <div class="header">${item.header}</div>
+            <svg class="barcode-svg" data-code="${item.barcodeValue}"></svg>
+            <div class="item-code">${item.barcodeValue}</div>
+            ${item.line1 ? `<div class="line line1">${item.line1}</div>` : ''}
+            ${item.line2 ? `<div class="line line2">${item.line2}</div>` : ''}
+            ${item.line3 ? `<div class="line line3">${item.line3}</div>` : ''}
+            ${item.line4 ? `<div class="line line4">${item.line4}</div>` : ''}
+          </div>
+        `)
+      }
+    })
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CLAD Barcode Labels</title>
+          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+          <style>
+            @page {
+              size: ${currentSizeConfig.widthMm * currentSizeConfig.labelsPerRow + currentSizeConfig.horizontalGapMm}mm ${currentSizeConfig.heightMm}mm;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+            }
+            .grid-container {
+              display: grid;
+              grid-template-columns: repeat(${currentSizeConfig.labelsPerRow}, ${currentSizeConfig.widthMm}mm);
+              column-gap: ${currentSizeConfig.horizontalGapMm}mm;
+              row-gap: 2mm;
+              padding: 1mm;
+            }
+            .label-sticker {
+              width: ${currentSizeConfig.widthMm}mm;
+              height: ${currentSizeConfig.heightMm}mm;
+              box-sizing: border-box;
+              padding: 1.5mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              overflow: hidden;
+              page-break-inside: avoid;
+            }
+            .header {
+              font-size: 8pt;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              line-height: 1;
+              color: #000;
+            }
+            .barcode-svg {
+              width: 90%;
+              max-height: 12mm;
+              margin: 0.5mm 0;
+            }
+            .item-code {
+              font-family: monospace;
+              font-size: 7.5pt;
+              font-weight: 700;
+              line-height: 1;
+            }
+            .line {
+              font-size: 6.5pt;
+              line-height: 1.1;
+              max-width: 100%;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .line1 { font-weight: 700; color: #111; }
+            .line2 { font-weight: 600; color: #333; }
+            .line3 { font-weight: 800; color: #000; }
+            .line4 { font-size: 6pt; color: #555; }
+          </style>
+        </head>
+        <body>
+          <div class="grid-container">
+            ${labelsHtml.join('')}
+          </div>
+          <script>
+            window.onload = function() {
+              var svgs = document.querySelectorAll('.barcode-svg');
+              svgs.forEach(function(svg) {
+                var code = svg.getAttribute('data-code');
+                if (code && window.JsBarcode) {
+                  window.JsBarcode(svg, code, {
+                    format: 'CODE128',
+                    width: 1.2,
+                    height: 25,
+                    displayValue: false,
+                    margin: 0
+                  });
+                }
+              });
+              setTimeout(function() {
+                window.focus();
+                window.print();
+                setTimeout(function() {
+                  window.parent.document.body.removeChild(window.frameElement);
+                }, 500);
+              }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    doc.close()
   }
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-        <div className="bg-white rounded-3xl max-w-xl w-full border border-[#E8D399] shadow-2xl overflow-hidden flex flex-col my-8 animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="bg-[#0A0A0A] px-6 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#1A1A1A] border border-[#D4AF37] flex items-center justify-center text-[#D4AF37]">
-                <QrCode size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-black tracking-wide text-white">
-                  Receive Stock &amp; Barcode ({BRAND_EN})
-                </h2>
-                <p className="text-xs text-[#D4AF37] font-semibold">
-                  Receive incoming stock &amp; assign / reuse SKU barcode
-                </p>
-              </div>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+        <div className="bg-white rounded-3xl max-w-6xl w-full border border-gray-200 shadow-2xl overflow-hidden flex flex-col my-auto max-h-[96vh]">
+          {/* TOP BAR matching Screenshot 195106 */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-[#0A0A0A] text-white">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-black tracking-wide text-white flex items-center gap-1.5">
+                Barcode Generator
+              </h2>
+              <Info size={14} className="text-[#D4AF37] opacity-80" />
             </div>
-            <button
-              onClick={handleResetAndClose}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
-            >
-              <X size={16} />
-            </button>
+
+            {/* Right side: Printer / Size info & Settings gear */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-gray-300">
+                <span>
+                  Printer <strong className="text-white">{settings.printerType === 'label' ? 'Label Printer' : 'Regular Printer'}</strong>
+                </span>
+                <span className="text-gray-500">|</span>
+                <span>
+                  Size <strong className="text-[#D4AF37]">{currentSizeConfig.name}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettingsDrawer(true)}
+                title="Barcode Settings"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-[#D4AF37] hover:text-[#0A0A0A] flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <Settings size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
-          {/* Success Screen */}
-          {result ? (
-            <div className="p-6 space-y-6 text-center">
-              <div className="w-16 h-16 bg-emerald-100 border border-emerald-300 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle size={32} />
+          {/* Status Message */}
+          {statusMessage && (
+            <div
+              className={`px-6 py-2.5 flex items-center justify-between text-xs font-bold ${
+                statusMessage.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200'
+                  : 'bg-red-50 text-red-800 border-b border-red-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {statusMessage.type === 'success' ? <CheckCircle size={15} /> : <AlertCircle size={15} />}
+                <span>{statusMessage.text}</span>
               </div>
-
-              <div>
-                <h3 className="text-xl font-black text-[#0A0A0A]">
-                  {result.is_new_barcode ? 'New Barcode Generated & Stock Added!' : 'Stock Restocked with Existing Barcode!'}
-                </h3>
-                <p className="text-xs text-gray-600 mt-1">
-                  {result.movement_type === 'RESTOCK'
-                    ? 'Existing SKU barcode was reused to avoid duplicate barcode IDs.'
-                    : 'A unique SKU barcode was generated and linked.'}
-                </p>
-              </div>
-
-              {/* Barcode Receipt Summary */}
-              <div className="bg-[#FBFAF6] border border-[#E8D399] rounded-2xl p-4 text-left space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider">Product:</span>
-                  <span className="font-black text-black">{result.product_name}</span>
-                </div>
-                {result.variant_name && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 font-bold uppercase tracking-wider">Variant / SKU:</span>
-                    <span className="font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
-                      {result.variant_name}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider">Barcode Value:</span>
-                  <span className="font-mono font-black text-[#0A0A0A] bg-white px-2 py-0.5 rounded border border-gray-300">
-                    {result.barcode_value}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-xs border-t border-gray-200 pt-2">
-                  <span className="text-gray-500 font-bold uppercase tracking-wider">Stock Update:</span>
-                  <span className="font-black text-emerald-700">
-                    {result.quantity_before} + {result.quantity_received} = {result.quantity_after} Units
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPrintModal(true)}
-                  className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] font-black hover:bg-[#1A1A1A] transition-all shadow-md cursor-pointer"
-                >
-                  <Printer size={16} />
-                  Print {result.quantity_received} Physical Stickers
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetAndClose}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
-                >
-                  Done
-                </button>
-              </div>
+              <button
+                onClick={() => setStatusMessage(null)}
+                className="text-gray-500 hover:text-black font-black"
+              >
+                ✕
+              </button>
             </div>
-          ) : (
-            /* Receiving Form */
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
-                  <AlertCircle size={15} />
-                  {error}
-                </div>
-              )}
+          )}
 
-              {/* Product Selection */}
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-1.5">
-                  1. Select Product <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value ? Number(e.target.value) : '')}
-                  required
-                  className="w-full py-3 px-3.5 rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] font-bold text-sm text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white"
-                >
-                  <option value="">-- Choose Product --</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (₹{p.price})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* MAIN WORKSPACE BODY (Scrollable) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {/* TOP CARD: 2-COLUMN INTAKE FORM */}
+            <div className="bg-[#FBFAF6] border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 items-start">
+                {/* LEFT SECTION: Form Inputs */}
+                <div className="space-y-4">
+                  <span className="block text-xs font-black uppercase tracking-wider text-gray-800">
+                    Enter item details to add for barcode
+                  </span>
 
-              {/* Variant / SKU Selection */}
-              {selectedProductId && (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-black uppercase tracking-wider text-gray-700">
-                      2. Variant / SKU Selection
-                    </label>
-                    <div className="flex gap-2 text-[11px] font-bold">
-                      {variants.length > 0 && (
+                  {/* Row 1: Item Name & Item Code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Item Name Dropdown / Combobox with + ADD ITEM at top */}
+                    <div className="relative" ref={dropdownRef}>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Item Name <span className="text-red-500">*</span>
+                      </label>
+                      <div
+                        onClick={() => setDropdownOpen(true)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white flex items-center justify-between cursor-pointer focus-within:border-[#0A0A0A]"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Enter / Select Item Name"
+                          value={productSearch}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value)
+                            setDropdownOpen(true)
+                          }}
+                          className="w-full text-xs font-bold text-gray-900 bg-transparent outline-none"
+                        />
+                        <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                      </div>
+
+                      {/* Dropdown Menu matching Screenshot 195243 */}
+                      {dropdownOpen && (
+                        <div className="absolute left-0 top-full mt-1 w-full sm:w-[380px] bg-white rounded-2xl border border-gray-300 shadow-2xl z-50 overflow-hidden animate-in fade-in duration-100">
+                          {/* + ADD ITEM Trigger */}
+                          <div
+                            onClick={() => {
+                              setDropdownOpen(false)
+                              setShowQuickAddModal(true)
+                            }}
+                            className="p-3 bg-blue-50/70 hover:bg-blue-100 border-b border-blue-200 text-blue-700 text-xs font-black flex items-center gap-2 cursor-pointer transition-colors"
+                          >
+                            <Plus size={15} /> + ADD ITEM
+                          </div>
+
+                          {/* Product Items List */}
+                          <div className="max-h-56 overflow-y-auto divide-y divide-gray-100">
+                            {filteredProducts.length === 0 ? (
+                              <div className="p-4 text-xs text-gray-400 text-center font-bold">
+                                No matching products. Click "+ ADD ITEM" above.
+                              </div>
+                            ) : (
+                              filteredProducts.map((p) => (
+                                <div
+                                  key={p.id}
+                                  onClick={() => selectProductItem(p)}
+                                  className="p-2.5 hover:bg-[#FBFAF6] cursor-pointer flex items-center justify-between text-xs transition-colors"
+                                >
+                                  <div className="min-w-0 pr-2">
+                                    <p className="font-bold text-gray-900 truncate">
+                                      {p.name}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 font-mono">
+                                      {p.barcode || 'No barcode'}
+                                    </p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span className="font-black text-gray-900">₹{p.price}</span>
+                                    <span className="block text-[10px] text-gray-500 font-semibold">
+                                      Stock: {p.stock_quantity ?? 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Item Code (with Assign Code button) */}
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Item Code <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter Item Code"
+                          value={itemCode}
+                          onChange={(e) => setItemCode(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-mono font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                        />
                         <button
                           type="button"
-                          onClick={() => setVariantMode('existing')}
-                          className={`px-2 py-0.5 rounded-md border ${
-                            variantMode === 'existing'
-                              ? 'bg-[#0A0A0A] text-[#D4AF37] border-[#D4AF37]'
-                              : 'bg-gray-100 text-gray-600 border-gray-200'
-                          }`}
+                          onClick={handleAssignCode}
+                          className="shrink-0 px-3 h-10 rounded-xl bg-gray-100 border border-gray-300 text-[11px] font-black text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
                         >
-                          Existing ({variants.length})
+                          Assign Code
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setVariantMode('new')}
-                        className={`px-2 py-0.5 rounded-md border flex items-center gap-1 ${
-                          variantMode === 'new'
-                            ? 'bg-[#0A0A0A] text-[#D4AF37] border-[#D4AF37]'
-                            : 'bg-gray-100 text-gray-600 border-gray-200'
-                        }`}
-                      >
-                        <Plus size={11} /> New SKU
-                      </button>
+                      </div>
                     </div>
                   </div>
 
-                  {loadingVariants ? (
-                    <div className="py-2 text-xs text-gray-500 flex items-center gap-2">
-                      <RefreshCw size={12} className="animate-spin" /> Loading product variants...
-                    </div>
-                  ) : variantMode === 'existing' && variants.length > 0 ? (
-                    <div className="space-y-2">
+                  {/* If product has variants, show variant picker */}
+                  {variants.length > 0 && (
+                    <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-amber-900 mb-1">
+                        Select Variant / Size for this Barcode
+                      </label>
                       <select
-                        value={selectedVariantId}
-                        onChange={(e) => setSelectedVariantId(e.target.value)}
-                        className="w-full py-2.5 px-3 rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] font-bold text-sm text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white"
+                        value={selectedVariant?.id || ''}
+                        onChange={(e) => handleSelectVariant(e.target.value)}
+                        className="w-full h-9 px-3 rounded-lg border border-amber-300 bg-white text-xs font-bold text-gray-900 outline-none"
                       >
                         {variants.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.variantName} {v.barcode ? `(Barcode: ${v.barcode})` : '(No barcode)'} — Stock: {v.stock}
+                            {v.variantName} (Barcode: {v.barcode || 'None'}) — ₹{v.price} — Stock: {v.stock}
                           </option>
                         ))}
                       </select>
-                      {selectedVariant?.barcode && (
-                        <p className="text-[11px] text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold">
-                          💡 Active barcode ({selectedVariant.barcode}) will be reused. Stock will be added as RESTOCK.
-                        </p>
-                      )}
                     </div>
-                  ) : variantMode === 'new' ? (
-                    <div className="bg-amber-50/50 border border-amber-200 p-3 rounded-xl space-y-2.5">
-                      <div className="text-xs font-bold text-amber-900">
-                        Create Arbitrary Variant (e.g. S, XXXL, 42, Maroon Gold, 500ml)
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Variant Name (e.g. XXXL, 42, Blue)"
-                          value={newVariantName}
-                          onChange={(e) => setNewVariantName(e.target.value)}
-                          required
-                          className="py-2 px-3 rounded-lg border border-gray-300 font-bold text-xs bg-white text-black outline-none focus:border-[#0A0A0A]"
-                        />
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder={`Price (Default: ₹${selectedProduct?.price || 0})`}
-                          value={newVariantPrice}
-                          onChange={(e) => setNewVariantPrice(e.target.value)}
-                          className="py-2 px-3 rounded-lg border border-gray-300 font-bold text-xs bg-white text-black outline-none focus:border-[#0A0A0A]"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-200">
-                      Standard Product (Single SKU). Barcode &amp; stock will apply directly to the product.
-                    </p>
                   )}
+
+                  {/* Row 2: No of Labels, Header, Line 1 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        No of Labels <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={noOfLabels}
+                        onChange={(e) => setNoOfLabels(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-black text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Header
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Header"
+                        value={header}
+                        onChange={(e) => setHeader(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Line 1
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Line 1"
+                        value={line1}
+                        onChange={(e) => setLine1(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Line 2, Line 3, Line 4 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Line 2
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Line 2"
+                        value={line2}
+                        onChange={(e) => setLine2(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Line 3
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Line 3"
+                        value={line3}
+                        onChange={(e) => setLine3(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                        Line 4
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Line 4"
+                        value={line4}
+                        onChange={(e) => setLine4(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT SECTION: Live Sticker Preview matching Screenshot 195106 */}
+                <div className="flex flex-col items-center">
+                  <div className="w-full flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-gray-600">
+                      Preview (i)
+                    </span>
+                  </div>
+
+                  <div className="w-full rounded-2xl bg-white border border-gray-300 p-4 shadow-md flex flex-col items-center justify-center text-center relative min-h-[190px]">
+                    {/* Header */}
+                    <span className="text-[11px] font-black uppercase tracking-wider text-gray-900 mb-1">
+                      {header || BRAND_EN}
+                    </span>
+
+                    {/* Barcode SVG */}
+                    <div className="my-1 flex items-center justify-center">
+                      <svg ref={previewSvgRef} />
+                    </div>
+
+                    {/* Item Code */}
+                    <span className="text-[10px] font-mono font-bold text-gray-800 tracking-wider">
+                      {itemCode || 'CLAD0000000'}
+                    </span>
+
+                    {/* Custom text lines */}
+                    <span className="text-[10px] font-bold text-gray-800 truncate max-w-full">
+                      {line1 || 'Line 1'}
+                    </span>
+                    <span className="text-[9px] font-medium text-gray-600 truncate max-w-full">
+                      {line2 || 'Line 2'}
+                    </span>
+                    <span className="text-[9px] font-bold text-black truncate max-w-full">
+                      {line3 || 'Line 3'}
+                    </span>
+                    {line4 && (
+                      <span className="text-[8px] text-gray-500 truncate max-w-full">
+                        {line4}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Add for Barcode Button */}
+                  <button
+                    type="button"
+                    onClick={handleAddToQueue}
+                    className="w-full mt-3 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add for Barcode
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM SECTION: QUEUE TABLE (`Item Details`) matching Screenshot 195637 */}
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              <div className="p-4 border-b border-gray-200 bg-[#FAFAFA] flex items-center justify-between">
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-800">
+                  Item Details ({queue.length})
+                </h3>
+              </div>
+
+              {queue.length === 0 ? (
+                /* Empty queue state matching Screenshot 195106 */
+                <div className="p-12 text-center flex flex-col items-center justify-center text-gray-400">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mb-3">
+                    <Sparkles size={28} className="text-gray-400" />
+                  </div>
+                  <p className="text-xs font-bold text-gray-600">
+                    Added items for Barcode generation will appear here.
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Select an item above, set quantity of labels, and click "Add for Barcode".
+                  </p>
+                </div>
+              ) : (
+                /* Queue Table with inline editable cells */
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#FBFAF6] border-b border-gray-200 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                      <tr>
+                        <th className="p-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={queue.every((it) => it.selected)}
+                            onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                            className="accent-[#0A0A0A] w-4 h-4 rounded cursor-pointer"
+                          />
+                        </th>
+                        <th className="p-3">Item Name</th>
+                        <th className="p-3 w-28">No of Labels</th>
+                        <th className="p-3">Header</th>
+                        <th className="p-3">Line 1</th>
+                        <th className="p-3">Line 2</th>
+                        <th className="p-3">Line 3</th>
+                        <th className="p-3">Line 4</th>
+                        <th className="p-3 w-12 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {queue.map((item) => (
+                        <tr key={item.id} className="hover:bg-[#FBFAF6] transition-colors">
+                          <td className="p-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.selected}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'selected', e.target.checked)
+                              }
+                              className="accent-[#0A0A0A] w-4 h-4 rounded cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-3 font-bold text-gray-900">
+                            <div>{item.productName}</div>
+                            <div className="text-[10px] font-mono text-gray-400">
+                              {item.barcodeValue} {item.variantName ? `(${item.variantName})` : ''}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.noOfLabels}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(
+                                  item.id,
+                                  'noOfLabels',
+                                  Math.max(1, parseInt(e.target.value) || 1)
+                                )
+                              }
+                              className="w-20 h-8 px-2 rounded-lg border border-gray-300 font-black text-center text-xs outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={item.header}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'header', e.target.value)
+                              }
+                              className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs font-bold outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={item.line1}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'line1', e.target.value)
+                              }
+                              className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={item.line2}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'line2', e.target.value)
+                              }
+                              className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={item.line3}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'line3', e.target.value)
+                              }
+                              className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="text"
+                              value={item.line4}
+                              onChange={(e) =>
+                                handleUpdateQueueItem(item.id, 'line4', e.target.value)
+                              }
+                              className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs outline-none focus:border-[#0A0A0A]"
+                            />
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQueueItem(item.id)}
+                              className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer mx-auto"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
 
-              {/* Quantity & Unit Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-1">
-                    Quantity Received <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    required
-                    className="w-full py-2.5 px-3 rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] font-black text-base text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white text-center"
-                  />
+              {/* Status Banner at table bottom matching Screenshot 195637 */}
+              {queue.length > 0 && (
+                <div className="p-3 bg-blue-50/70 border-t border-blue-200 text-xs text-blue-900 font-bold flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Info size={15} className="text-blue-600" />
+                    <span>You will need {totalLabelsNeeded} labels for printing.</span>
+                  </div>
+                  <span className="text-[11px] text-gray-600">
+                    {queue.filter((i) => i.selected).length} items selected
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-1">
-                    Purchase Unit Cost (₹)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Optional cost price"
-                    value={unitCost}
-                    onChange={(e) => setUnitCost(e.target.value)}
-                    className="w-full py-2.5 px-3 rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] font-bold text-sm text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white"
-                  />
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Optional Custom Barcode */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Custom Barcode (Optional — leave blank for auto-generation)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Auto (e.g. PBV00010001)"
-                  value={customBarcode}
-                  onChange={(e) => setCustomBarcode(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl border border-gray-300 bg-white font-mono text-xs text-gray-900 outline-none focus:border-[#0A0A0A]"
-                />
-              </div>
+          {/* MODAL FOOTER matching Screenshot 195637 */}
+          <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
 
-              {/* Note */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">
-                  Receipt Note (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Vendor Invoice #412 or Stock batch from Trichy"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="w-full py-2 px-3 rounded-xl border border-gray-300 bg-white text-xs text-gray-900 outline-none focus:border-[#0A0A0A]"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              {queue.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleResetAndClose}
-                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
+                  onClick={() => setShowSheetPreviewModal(true)}
+                  className="px-5 py-2.5 rounded-xl border-2 border-[#0A0A0A] bg-white text-[#0A0A0A] text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-all cursor-pointer"
                 >
-                  Cancel
+                  Preview
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedProductId}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] font-black hover:bg-[#1A1A1A] transition-all shadow-md disabled:opacity-60 cursor-pointer"
-                >
-                  {submitting ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
-                      Receiving...
-                    </>
-                  ) : (
-                    <>
-                      <QrCode size={16} />
-                      Receive Stock &amp; Generate Barcode
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
+              )}
+
+              <button
+                type="button"
+                onClick={handleGenerateAndCommitStock}
+                disabled={generating || queue.filter((it) => it.selected).length === 0}
+                className="px-6 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {generating ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
+                    Receiving Stock &amp; Generating...
+                  </>
+                ) : (
+                  <>
+                    <Printer size={15} /> Generate &amp; Add to Stock ({totalLabelsNeeded} Labels)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Print Multi-Label Modal */}
-      {result && showPrintModal && (
-        <BarcodePrintModal
-          isOpen={showPrintModal}
-          onClose={() => setShowPrintModal(false)}
-          productName={result.product_name}
-          variantName={result.variant_name}
-          barcodeValue={result.barcode_value}
-          price={selectedProduct?.price || 0}
-          defaultQuantity={result.quantity_received}
+      {/* Barcode Settings Drawer */}
+      {showSettingsDrawer && (
+        <BarcodeSettingsDrawer
+          isOpen={showSettingsDrawer}
+          onClose={() => setShowSettingsDrawer(false)}
+          settings={settings}
+          onUpdateSettings={(newSettings) => setSettings(newSettings)}
+        />
+      )}
+
+      {/* Quick Add Item Sub-Modal */}
+      {showQuickAddModal && (
+        <QuickAddItemModal
+          isOpen={showQuickAddModal}
+          onClose={() => setShowQuickAddModal(false)}
+          onSuccess={(created) => {
+            // Auto-select created item
+            selectProductItem({
+              id: created.productId,
+              name: created.productName,
+              price: created.price,
+              cost_price: created.costPrice,
+              barcode: created.barcode,
+              has_variants: !!created.variantId,
+            })
+          }}
+        />
+      )}
+
+      {/* Multi-Label Sheet Preview Modal */}
+      {showSheetPreviewModal && (
+        <BarcodeSheetPreviewModal
+          isOpen={showSheetPreviewModal}
+          onClose={() => setShowSheetPreviewModal(false)}
+          items={queue}
+          sizeConfig={currentSizeConfig}
+          onPrint={printQueueDirectly}
         />
       )}
     </>

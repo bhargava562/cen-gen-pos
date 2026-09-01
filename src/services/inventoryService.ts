@@ -77,7 +77,7 @@ export const inventoryService = {
     // 2. Fetch variants
     const { data: variants, error: varErr } = await supabase
       .from('product_variants')
-      .select('id, product_id, variant_name, price, offer_price, stock, barcode, sku, is_active, updated_at')
+      .select('id, product_id, variant_name, price, purchase_price, stock, barcode, sku, is_active, updated_at')
       .order('sort_order', { ascending: true })
 
     if (varErr) {
@@ -112,7 +112,7 @@ export const inventoryService = {
             barcode: v.barcode,
             stock: Number(v.stock) || 0,
             price: Number(v.price) || Number(p.price) || 0,
-            offer_price: v.offer_price ? Number(v.offer_price) : (p.offer_price ? Number(p.offer_price) : undefined),
+            offer_price: p.offer_price ? Number(p.offer_price) : undefined,
             unit: p.unit,
             unit_type: p.unit_type,
             category: p.category,

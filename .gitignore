@@ -27,3 +27,8 @@ dist-ssr
 *.sw?
 
 .vercel
+screenshots/
+fix*.cjs
+gen_logo.cjs
+safe_fix.cjs
+test-*.js

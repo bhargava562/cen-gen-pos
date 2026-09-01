@@ -18,7 +18,10 @@ import { AdjustStockModal } from './AdjustStockModal'
 import { StockHistoryDrawer } from './StockHistoryDrawer'
 import { formatCurrency } from '../../lib/retail'
 
+import { useProductStore } from '../../store/store'
+
 export const InventoryTable: React.FC = () => {
+  const { products: storeProducts, fetchProducts } = useProductStore()
   const [items, setItems] = useState<InventoryStockItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -35,6 +38,7 @@ export const InventoryTable: React.FC = () => {
   const loadData = async () => {
     setLoading(true)
     try {
+      void fetchProducts()
       const data = await inventoryService.fetchInventoryItems()
       setItems(data)
     } catch (err) {
@@ -75,9 +79,51 @@ export const InventoryTable: React.FC = () => {
   const lowStockCount = items.filter((i) => i.stock > 0 && i.stock <= 5).length
   const totalValuation = items.reduce((sum, i) => sum + i.stock * i.price, 0)
 
-  // Distinct products for receive modal
-  const distinctProducts = Array.from(
-    new Map(items.map((i) => [i.product_id, { id: i.product_id, name: i.name, price: i.price, stock_quantity: i.stock }])).values()
+  interface ProductOptionType {
+    id: number
+    name: string
+    price: number
+    cost_price?: number
+    barcode?: string
+    stock_quantity?: number
+    category?: string
+    has_variants?: boolean
+  }
+
+  // Combined product options for Barcode Generator intake
+  const distinctProducts: ProductOptionType[] = Array.from(
+    new Map<number, ProductOptionType>([
+      ...storeProducts.map(
+        (p): [number, ProductOptionType] => [
+          Number(p.id),
+          {
+            id: Number(p.id),
+            name: p.name,
+            price: p.price,
+            cost_price: p.purchasePrice || 0,
+            barcode: p.barcode,
+            stock_quantity: p.stockQuantity ?? p.stock ?? 0,
+            category: p.category,
+            has_variants: p.hasVariants,
+          },
+        ]
+      ),
+      ...items.map(
+        (i): [number, ProductOptionType] => [
+          i.product_id,
+          {
+            id: i.product_id,
+            name: i.name,
+            price: i.price,
+            cost_price: 0,
+            barcode: i.barcode || undefined,
+            stock_quantity: i.stock,
+            category: i.category || undefined,
+            has_variants: !!i.variant_id,
+          },
+        ]
+      ),
+    ]).values()
   )
 
   return (
