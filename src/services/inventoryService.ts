@@ -58,6 +58,27 @@ export interface StockAdjustmentPayload {
   created_by_name?: string
 }
 
+export interface CategoryRecord {
+  id: number
+  name_en: string
+  name_ta?: string
+  is_active: boolean
+  sort_order: number
+  product_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface InventoryAnalyticsSummary {
+  incomingStock: number
+  unitsSold: number
+  unitsDamaged: number
+  unitsReturned: number
+  netDelta: number
+  totalMovementsCount: number
+  movements: InventoryMovement[]
+}
+
 export const inventoryService = {
   /**
    * Fetch complete SKU/variant level inventory list.
@@ -177,6 +198,8 @@ export const inventoryService = {
     product_id?: number
     variant_id?: string | null
     movement_type?: string
+    start_date?: string
+    end_date?: string
     limit?: number
     offset?: number
   }): Promise<{ movements: InventoryMovement[]; total: number }> {
@@ -202,6 +225,14 @@ export const inventoryService = {
       query = query.eq('movement_type', params.movement_type)
     }
 
+    if (params?.start_date) {
+      query = query.gte('created_at', params.start_date)
+    }
+
+    if (params?.end_date) {
+      query = query.lte('created_at', params.end_date)
+    }
+
     if (params?.limit) {
       const from = params.offset || 0
       const to = from + params.limit - 1
@@ -222,5 +253,141 @@ export const inventoryService = {
     })) as InventoryMovement[]
 
     return { movements, total: count || 0 }
+  },
+
+  /**
+   * Aggregate stock movements math for Analytics & Reports.
+   */
+  async fetchInventoryAnalytics(startDate?: string, endDate?: string): Promise<InventoryAnalyticsSummary> {
+    const { movements } = await this.fetchMovements({
+      start_date: startDate,
+      end_date: endDate,
+      limit: 1000,
+    })
+
+    let incomingStock = 0
+    let unitsSold = 0
+    let unitsDamaged = 0
+    let unitsReturned = 0
+
+    for (const m of movements) {
+      const delta = Number(m.quantity_delta) || 0
+      if (m.movement_type === 'INITIAL_BARCODE_STOCK') {
+        incomingStock += delta
+      } else if (m.movement_type === 'RESTOCK') {
+        if (delta > 0) {
+          incomingStock += delta
+        }
+      } else if (m.movement_type === 'SALE') {
+        unitsSold += Math.abs(delta)
+      } else if (m.movement_type === 'DAMAGE') {
+        unitsDamaged += Math.abs(delta)
+      } else if (m.movement_type === 'RETURN') {
+        unitsReturned += Math.abs(delta)
+      }
+    }
+
+    const netDelta = incomingStock + unitsReturned - unitsSold - unitsDamaged
+
+    return {
+      incomingStock,
+      unitsSold,
+      unitsDamaged,
+      unitsReturned,
+      netDelta,
+      totalMovementsCount: movements.length,
+      movements,
+    }
+  },
+
+  /**
+   * Fetch all categories with product counts.
+   */
+  async fetchCategories(): Promise<CategoryRecord[]> {
+    const { data: categories, error: catErr } = await supabase
+      .from('categories')
+      .select('id, name_en, name_ta, is_active, sort_order, created_at, updated_at')
+      .order('sort_order', { ascending: true })
+
+    if (catErr) {
+      console.error('[inventoryService.fetchCategories] Error:', catErr)
+      throw catErr
+    }
+
+    // Get count of products per category
+    const { data: products, error: prodErr } = await supabase
+      .from('products')
+      .select('category_id')
+
+    const countMap: Record<number, number> = {}
+    if (!prodErr && products) {
+      for (const p of products) {
+        if (p.category_id) {
+          countMap[p.category_id] = (countMap[p.category_id] || 0) + 1
+        }
+      }
+    }
+
+    return (categories || []).map((c) => ({
+      ...c,
+      product_count: countMap[c.id] || 0,
+    }))
+  },
+
+  /**
+   * Create category.
+   */
+  async createCategory(payload: { name_en: string; name_ta?: string; sort_order?: number; is_active?: boolean }): Promise<CategoryRecord> {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        name_en: payload.name_en.trim(),
+        name_ta: payload.name_ta?.trim() || null,
+        sort_order: payload.sort_order ?? 0,
+        is_active: payload.is_active !== false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[inventoryService.createCategory] Error:', error)
+      throw error
+    }
+
+    return { ...data, product_count: 0 }
+  },
+
+  /**
+   * Update category.
+   */
+  async updateCategory(id: number, payload: Partial<{ name_en: string; name_ta?: string; sort_order?: number; is_active?: boolean }>): Promise<CategoryRecord> {
+    const { data, error } = await supabase
+      .from('categories')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[inventoryService.updateCategory] Error:', error)
+      throw error
+    }
+
+    return data
+  },
+
+  /**
+   * Delete category.
+   */
+  async deleteCategory(id: number): Promise<void> {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('[inventoryService.deleteCategory] Error:', error)
+      throw error
+    }
   }
 }

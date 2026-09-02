@@ -33,8 +33,9 @@ export default {
         borderLight: '#E5E7EB', // Neutral clean border
       },
       fontFamily: {
-        sans:      ['Inter', 'sans-serif'],
-        headline:  ['Montserrat', 'Poppins', 'sans-serif'],
+        sans:      ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        brand:     ['"Cinzel"', 'serif'],
+        headline:  ['"Cinzel"', '"Plus Jakarta Sans"', 'sans-serif'],
       },
       boxShadow: {
         soft:   '0 1px 3px rgba(0,0,0,0.05)',

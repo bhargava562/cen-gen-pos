@@ -23,7 +23,6 @@ import { BRAND_EN } from '../../lib/brand'
 import { barcodeService } from '../../services/barcodeService'
 import { fetchVariantsByProduct, type ProductVariant } from '../../services/variantService'
 import { BarcodeSettingsDrawer } from './BarcodeSettingsDrawer'
-import { QuickAddItemModal } from './QuickAddItemModal'
 import { BarcodeSheetPreviewModal } from './BarcodeSheetPreviewModal'
 
 interface ProductOption {
@@ -57,7 +56,6 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
   // Settings
   const [settings, setSettings] = useState<BarcodeSettings>(getStoredBarcodeSettings())
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false)
-  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
   const [showSheetPreviewModal, setShowSheetPreviewModal] = useState(false)
 
   // Current Form State (Left Column)
@@ -527,25 +525,14 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                         <ChevronDown size={14} className="text-gray-400 shrink-0" />
                       </div>
 
-                      {/* Dropdown Menu matching Screenshot 195243 */}
+                      {/* Dropdown Menu */}
                       {dropdownOpen && (
                         <div className="absolute left-0 top-full mt-1 w-full sm:w-[380px] bg-white rounded-2xl border border-gray-300 shadow-2xl z-50 overflow-hidden animate-in fade-in duration-100">
-                          {/* + ADD ITEM Trigger */}
-                          <div
-                            onClick={() => {
-                              setDropdownOpen(false)
-                              setShowQuickAddModal(true)
-                            }}
-                            className="p-3 bg-blue-50/70 hover:bg-blue-100 border-b border-blue-200 text-blue-700 text-xs font-black flex items-center gap-2 cursor-pointer transition-colors"
-                          >
-                            <Plus size={15} /> + ADD ITEM
-                          </div>
-
                           {/* Product Items List */}
-                          <div className="max-h-56 overflow-y-auto divide-y divide-gray-100">
+                          <div className="max-h-60 overflow-y-auto divide-y divide-gray-100">
                             {filteredProducts.length === 0 ? (
                               <div className="p-4 text-xs text-gray-400 text-center font-bold">
-                                No matching products. Click "+ ADD ITEM" above.
+                                No matching products found.
                               </div>
                             ) : (
                               filteredProducts.map((p) => (
@@ -601,12 +588,45 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                     </div>
                   </div>
 
-                  {/* If product has variants, show variant picker */}
+                  {/* If product has variants, show variant picker & Add All Variants button */}
                   {variants.length > 0 && (
-                    <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl">
-                      <label className="block text-[11px] font-black uppercase tracking-wider text-amber-900 mb-1">
-                        Select Variant / Size for this Barcode
-                      </label>
+                    <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-black uppercase tracking-wider text-amber-900">
+                          Select Variant / Size ({variants.length} available)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!selectedProduct) return
+                            const itemsToAdd: BarcodeQueueItem[] = variants.map((v) => ({
+                              id: `queue_${Date.now()}_${v.id}_${Math.random()}`,
+                              productId: selectedProduct.id,
+                              productName: selectedProduct.name,
+                              variantId: v.id,
+                              variantName: v.variantName,
+                              barcodeValue: v.barcode || `CLAD${Math.floor(1000000 + Math.random() * 9000000)}`,
+                              price: v.price || selectedProduct.price,
+                              costPrice: selectedProduct.cost_price || 0,
+                              noOfLabels: noOfLabels || 2,
+                              header: header || BRAND_EN,
+                              line1: selectedProduct.name,
+                              line2: `Size: ${v.variantName}`,
+                              line3: settings.showDiscount ? 'Discount: 0%' : `Price: ₹${v.price || selectedProduct.price}`,
+                              line4: line4.trim(),
+                              selected: true,
+                            }))
+                            setQueue((prev) => [...prev, ...itemsToAdd])
+                            setStatusMessage({
+                              type: 'success',
+                              text: `Added all ${variants.length} variants for "${selectedProduct.name}" to the queue!`,
+                            })
+                          }}
+                          className="px-2.5 py-1 rounded-md bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] text-[10px] font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                        >
+                          <Plus size={11} /> Add All {variants.length} Variants to Queue
+                        </button>
+                      </div>
                       <select
                         value={selectedVariant?.id || ''}
                         onChange={(e) => handleSelectVariant(e.target.value)}
@@ -614,7 +634,7 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                       >
                         {variants.map((v) => (
                           <option key={v.id} value={v.id}>
-                            {v.variantName} (Barcode: {v.barcode || 'None'}) — ₹{v.price} — Stock: {v.stock}
+                            {v.variantName} (Barcode: {v.barcode || 'Auto'}) — ₹{v.price} — Stock: {v.stock}
                           </option>
                         ))}
                       </select>
@@ -966,25 +986,6 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
           onClose={() => setShowSettingsDrawer(false)}
           settings={settings}
           onUpdateSettings={(newSettings) => setSettings(newSettings)}
-        />
-      )}
-
-      {/* Quick Add Item Sub-Modal */}
-      {showQuickAddModal && (
-        <QuickAddItemModal
-          isOpen={showQuickAddModal}
-          onClose={() => setShowQuickAddModal(false)}
-          onSuccess={(created) => {
-            // Auto-select created item
-            selectProductItem({
-              id: created.productId,
-              name: created.productName,
-              price: created.price,
-              cost_price: created.costPrice,
-              barcode: created.barcode,
-              has_variants: !!created.variantId,
-            })
-          }}
         />
       )}
 
