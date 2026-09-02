@@ -391,7 +391,13 @@ export default function Pos(props: PosProps = {}) {
   const updateItem = (id: string | number, field: 'name' | 'basePrice' | 'qty', value: string | number) => {
     setItems(cur => cur.map((item) => {
       if (item.id !== id) return item
-      const nextItem = { ...item, [field]: value } as PosItem
+      let safeVal = value
+      if (field === 'basePrice') {
+        safeVal = Math.max(0, Number(value) || 0)
+      } else if (field === 'qty') {
+        safeVal = Math.max(1, Number(value) || 1)
+      }
+      const nextItem = { ...item, [field]: safeVal } as PosItem
       return field === 'basePrice' || field === 'qty' ? recalc(nextItem, nextItem.qty) : nextItem
     }))
   }
@@ -1038,22 +1044,14 @@ export default function Pos(props: PosProps = {}) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-[13px] font-black uppercase tracking-wider text-[#374151] mb-1">Price</p>
-                        <input
-                          type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                          value={item.basePrice === 0 ? '' : item.basePrice}
-                          onChange={e => updateItem(item.id, 'basePrice', e.target.value)}
-                          placeholder="0"
-                          className={`w-full h-12 px-3 border rounded-xl text-[16px] font-black text-right focus:outline-none focus:border-[#D4AF37] ${
-                            item.source === 'manual'
-                              ? 'bg-[#FAFAFA] border-gray-200 text-[#111111]'
-                              : 'bg-white border-gray-300 text-[#111111]'
-                          }`}
-                        />
+                        <p className="text-[12px] font-black uppercase tracking-wider text-[#374151] mb-1">Unit Price</p>
+                        <div className="h-11 rounded-xl border border-gray-200 bg-[#FAFAFA] px-3 flex items-center justify-end text-[14px] font-black text-[#111111]">
+                          ₹{Number(item.basePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </div>
                       </div>
                       <div>
-                        <p className="text-[13px] font-black uppercase tracking-wider text-[#374151] mb-1">Total</p>
-                        <div className="h-12 rounded-xl border border-gray-200 bg-white px-3 flex items-center justify-end text-[16px] font-black text-[#0A0A0A]">
+                        <p className="text-[12px] font-black uppercase tracking-wider text-[#374151] mb-1">Total</p>
+                        <div className="h-11 rounded-xl border border-gray-200 bg-white px-3 flex items-center justify-end text-[15px] font-black text-[#0A0A0A]">
                           {formatCurrency(item.lineTotal)}
                         </div>
                       </div>
@@ -1099,18 +1097,10 @@ export default function Pos(props: PosProps = {}) {
                     </div>
 
                     {/* Price */}
-                    <div>
-                      <input
-                        type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                        value={item.basePrice === 0 ? '' : item.basePrice}
-                        onChange={e => updateItem(item.id, 'basePrice', e.target.value)}
-                        placeholder="0"
-                        className={`w-full px-3 py-2 border rounded-lg text-[13px] font-black text-right focus:outline-none focus:border-[#D4AF37] ${
-                          item.source === 'manual'
-                            ? 'bg-[#FAFAFA] border-gray-200 text-[#111111]'
-                            : 'bg-white border-gray-300 text-[#111111]'
-                        }`}
-                      />
+                    <div className="flex items-center justify-end px-3 py-2 text-right">
+                      <span className="text-[13px] font-black text-[#111111] tracking-tight">
+                        ₹{Number(item.basePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
 
                     {/* Quantity Controls */}
