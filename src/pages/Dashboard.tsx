@@ -259,6 +259,15 @@ export default function Dashboard() {
 
   const handleTabClick = (tabKey: TabKey) => {
     setTab(tabKey)
+    if (tabKey === 'pos_analytics') {
+      navigate('/dashboard?tab=pos_analytics', { replace: true })
+    } else if (tabKey === 'expenses') {
+      navigate('/dashboard?tab=expenses', { replace: true })
+    } else if (tabKey === 'advance_orders') {
+      navigate('/dashboard?tab=advance_orders', { replace: true })
+    } else {
+      navigate('/dashboard', { replace: true })
+    }
   }
 
   const deletedOrderIds = React.useRef<Set<string>>(new Set())
@@ -1444,59 +1453,69 @@ export default function Dashboard() {
   )
 
   const allNavItems: Array<{ id: TabKey; icon: React.ReactNode; label: string }> = [
-    { id: 'billing',       icon: <ShoppingCart size={20} />,     label: 'Billing Panel' },
-    { id: 'inventory',     icon: <Layers size={20} />,           label: 'Inventory & Barcodes' },
-    { id: 'advance_orders',icon: <FileText size={20} />,         label: 'Advance Orders' },
-    { id: 'expenses',      icon: <Receipt size={20} />,          label: 'Expenses' },
-    { id: 'categories',    icon: <Package size={20} />,           label: 'Categories' },
-    { id: 'history',       icon: <List size={20} />,             label: 'Order History' },
-    { id: 'pos_analytics', icon: <BarChart2 size={20} />,        label: 'Analytics Dashboard' },
-    { id: 'coupons',       icon: <Box size={20} />,              label: 'Coupons' },
+    { id: 'billing',       icon: <ShoppingCart size={18} />,     label: 'Billing Panel' },
+    { id: 'inventory',     icon: <Layers size={18} />,           label: 'Inventory & Barcodes' },
+    { id: 'advance_orders',icon: <FileText size={18} />,         label: 'Advance Orders' },
+    { id: 'expenses',      icon: <Receipt size={18} />,          label: 'Expenses' },
+    { id: 'categories',    icon: <Package size={18} />,           label: 'Categories' },
+    { id: 'history',       icon: <List size={18} />,             label: 'Order History' },
+    { id: 'pos_analytics', icon: <BarChart2 size={18} />,        label: 'Analytics Dashboard' },
+    { id: 'coupons',       icon: <Box size={18} />,              label: 'Coupons' },
   ]
   const navItems = allNavItems.filter(item => role === 'admin' || (item.id !== 'pos_analytics' && item.id !== 'coupons'))
 
   return (
-    <div className="admin-shell h-screen min-h-screen bg-bgMain flex flex-col lg:flex-row overflow-hidden">
+    <div className="admin-shell h-screen max-h-screen min-h-screen bg-bgMain flex flex-col lg:flex-row overflow-hidden">
       {/* Sidebar */}
       <aside
         className={[
-          'w-full bg-[#0A0A0A] text-white border-b lg:border-b-0 lg:border-r border-[#D4AF37]/20 flex flex-col shrink-0 lg:h-full',
+          'w-full bg-[#0A0A0A] text-white border-b lg:border-b-0 lg:border-r border-[#D4AF37]/20 flex flex-col shrink-0 h-auto lg:h-full lg:max-h-screen',
           'transition-[width] duration-300 ease-in-out overflow-hidden',
-          sidebarCollapsed ? 'lg:w-[88px]' : 'lg:w-[260px]',
+          sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[240px] xl:w-[250px]',
         ].join(' ')}
       >
         {/* Desktop brand header */}
-        <div className={`hidden lg:flex items-center relative transition-all duration-300 ${sidebarCollapsed ? 'flex-col items-center pt-5 pb-4 px-2 gap-3' : 'px-5 py-5 justify-between'}`}>
-          <Link to="/pos" title="Go to Billing Panel" className={`flex items-center gap-3 min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'justify-center' : 'flex-1'}`}>
-            <div className="flex items-center justify-center shrink-0 w-11 h-11 rounded-xl bg-[#141414] border border-[#D4AF37]/50 shadow-sm overflow-hidden p-1 hover:scale-105 transition-transform">
+        <div className={`hidden lg:flex items-center relative transition-all duration-300 shrink-0 ${sidebarCollapsed ? 'flex-col items-center pt-4 pb-3 px-2 gap-2' : 'px-4 py-3.5 justify-between border-b border-white/5'}`}>
+          <Link to="/pos" title="Go to Billing Panel" className={`flex items-center gap-2.5 min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'justify-center' : 'flex-1'}`}>
+            <div className="flex items-center justify-center shrink-0 w-9 h-9 rounded-xl bg-[#141414] border border-[#D4AF37]/50 shadow-sm overflow-hidden p-0.5 hover:scale-105 transition-transform">
               <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="w-full h-full object-contain" />
             </div>
             {!sidebarCollapsed && (
-              <h1 className="text-[20px] font-black text-white truncate tracking-wider">{BRAND_EN}</h1>
+              <h1 className="text-[17px] font-black text-white truncate tracking-wider">{BRAND_EN}</h1>
             )}
           </Link>
           <button
             type="button"
             onClick={() => setSidebarCollapsed((state) => !state)}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/80 hover:bg-white/15 hover:text-white transition-colors shrink-0 cursor-pointer"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/15 hover:text-white transition-colors shrink-0 cursor-pointer"
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <ChevronDown size={16} className={`transition-transform duration-300 ${sidebarCollapsed ? '-rotate-90' : 'rotate-90'}`} />
+            <ChevronDown size={14} className={`transition-transform duration-300 ${sidebarCollapsed ? '-rotate-90' : 'rotate-90'}`} />
           </button>
         </div>
         {/* Mobile mini-header */}
-        <div className="flex lg:hidden items-center justify-between px-4 py-4 border-b border-white/10 bg-[#0A0A0A]">
-          <Link to="/pos" title="Go to Billing Panel" className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#141414] border border-[#D4AF37]/50 shrink-0 overflow-hidden shadow-sm p-1 hover:scale-105 transition-transform">
+        <div className="flex lg:hidden items-center justify-between px-3 py-2.5 border-b border-white/10 bg-[#0A0A0A] shrink-0">
+          <Link to="/pos" title="Go to Billing Panel" className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#141414] border border-[#D4AF37]/50 shrink-0 overflow-hidden shadow-sm p-0.5 hover:scale-105 transition-transform">
               <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="w-full h-full object-contain" />
             </div>
-            <span className="text-[18px] font-black text-white tracking-wider truncate">{BRAND_EN}</span>
+            <span className="text-[16px] font-black text-white tracking-wider truncate">{BRAND_EN}</span>
           </Link>
+          <button
+            onClick={() => {
+              useAdminAuthStore.getState().logout()
+              navigate('/admin-login', { replace: true })
+            }}
+            className="flex items-center gap-1 text-[11px] font-bold text-white/70 hover:text-white px-2.5 py-1 rounded-lg bg-white/10"
+          >
+            <Power size={13} />
+            <span>Logout</span>
+          </button>
         </div>
-        {/* Nav */}
+        {/* Nav List - Height safe and scrollable */}
         <nav
-          className={`flex overflow-x-auto overflow-y-hidden lg:flex-col lg:overflow-visible gap-2 px-3 py-3 lg:py-2 lg:flex-grow transition-all duration-300 hide-scrollbar ${sidebarCollapsed ? 'lg:px-2' : 'lg:px-4'}`}
+          className={`flex overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto lg:flex-col gap-1 lg:gap-1 px-2 py-2 lg:px-2.5 lg:py-2.5 flex-1 min-h-0 transition-all duration-300 hide-scrollbar ${sidebarCollapsed ? 'lg:px-1.5' : 'lg:px-2.5'}`}
         >
           {navItems.map(item => (
             <button
@@ -1505,15 +1524,15 @@ export default function Dashboard() {
               title={item.label}
               className={[
                 'shrink-0 flex flex-col lg:flex-row items-center justify-center lg:justify-start',
-                'gap-1 lg:gap-3',
-                'h-[56px] w-[64px] lg:w-full lg:h-[48px]',
-                sidebarCollapsed ? 'lg:w-[48px] lg:justify-center mx-auto' : 'lg:px-4',
-                'px-0 py-1 lg:py-0',
-                'rounded-xl font-medium text-[11px] lg:text-[14px] transition-all overflow-hidden',
+                'gap-1 lg:gap-2.5',
+                'h-[46px] min-w-[56px] lg:min-w-0 lg:w-full lg:h-[38px] xl:h-[40px]',
+                sidebarCollapsed ? 'lg:w-[42px] lg:justify-center mx-auto' : 'lg:px-3',
+                'px-1 py-1 lg:py-0',
+                'rounded-xl font-medium text-[10px] lg:text-[12.5px] xl:text-[13px] transition-all overflow-hidden cursor-pointer',
                 tab === item.id ? 'bg-[#D4AF37] text-[#0A0A0A] font-black shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-[#D4AF37]',
               ].join(' ')}
             >
-              <span className="shrink-0 flex items-center gap-1">
+              <span className="shrink-0 flex items-center">
                 {item.icon}
               </span>
               <span className={`hidden lg:block truncate text-left transition-all duration-200 ${sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'opacity-100 flex-1'}`}>
@@ -1521,25 +1540,27 @@ export default function Dashboard() {
               </span>
             </button>
           ))}
-          {/* Logout button */}
+        </nav>
+
+        {/* Desktop Logout Button anchored at bottom */}
+        <div className={`hidden lg:block shrink-0 border-t border-white/10 p-2 lg:p-2.5 ${sidebarCollapsed ? 'px-1.5' : 'px-2.5'}`}>
           <button
             onClick={() => {
               useAdminAuthStore.getState().logout()
               navigate('/admin-login', { replace: true })
             }}
             className={[
-              'shrink-0 flex flex-col lg:flex-row items-center justify-center lg:justify-start',
-              'gap-1 lg:gap-3',
-              'h-[56px] w-[64px] lg:w-full lg:h-[48px]',
-              sidebarCollapsed ? 'lg:w-[48px] lg:justify-center mx-auto' : 'lg:px-4',
-              'px-0 py-1 lg:py-0',
-              'rounded-xl font-medium text-[11px] lg:text-[14px] transition-all text-white/70 hover:bg-white/10 hover:text-white lg:mt-auto mb-1 lg:mb-4 overflow-hidden',
+              'shrink-0 flex items-center justify-center lg:justify-start',
+              'gap-2.5',
+              'w-full h-[38px] xl:h-[40px]',
+              sidebarCollapsed ? 'lg:w-[42px] lg:justify-center mx-auto' : 'lg:px-3',
+              'rounded-xl font-medium text-[12.5px] xl:text-[13px] transition-all text-white/70 hover:bg-rose-500/20 hover:text-rose-400 overflow-hidden cursor-pointer',
             ].join(' ')}
           >
-            <span className="shrink-0"><Power size={20} /></span>
-            <span className={`hidden lg:block truncate text-left transition-all duration-200 ${sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'opacity-100 flex-1'}`}>Logout</span>
+            <span className="shrink-0"><Power size={17} /></span>
+            <span className={`truncate text-left transition-all duration-200 ${sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'opacity-100 flex-1'}`}>Logout</span>
           </button>
-        </nav>
+        </div>
 
       </aside>
 
@@ -2055,8 +2076,8 @@ export default function Dashboard() {
               {/* Status Distribution - compact bar */}
               <div className="bg-white rounded-2xl border border-[#E5E7EB]/30 p-4 shadow-sm">
                 <h3 className="text-[13px] font-black text-[#111111] mb-3">{l('Status Distribution', 'நிலை விளக்கம்')}</h3>
-                <div className="h-36">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-36 w-full min-w-0 relative">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <BarChart data={analytics.statusDistribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD0" />
                       <XAxis dataKey="name" tick={{ fill: '#6B7661', fontSize: 9 }} axisLine={false} tickLine={false} />
@@ -2176,8 +2197,8 @@ export default function Dashboard() {
                       <h3 className="text-[16px] font-bold text-[#111111]">Revenue Trend {analytics.chartYear}</h3>
                       <span className="text-[12px] font-bold text-[#0A0A0A] bg-red-50 px-2.5 py-1 rounded-md">Avg {formatCurrency(analytics.monthlyRevenue || 0)}/mo</span>
                     </div>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-48 w-full min-w-0 relative">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={analytics.monthlyTrend}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                           <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
@@ -2249,8 +2270,8 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-64 w-full min-w-0 relative">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={analytics.weeklySales}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                           <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -2590,8 +2611,8 @@ export default function Dashboard() {
                   <div className="xl:col-span-2 bg-white rounded-2xl border border-[#E5E7EB]/30 p-5 shadow-sm">
                     <h3 className="text-[15px] font-bold text-[#111111] mb-4">Coupon Usage (Last 7 Days)</h3>
                     {analytics.couponDailyTrend.some(d => d.orders > 0) ? (
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-64 w-full min-w-0 relative">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <BarChart data={analytics.couponDailyTrend}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                             <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
