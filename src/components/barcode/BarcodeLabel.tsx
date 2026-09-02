@@ -29,10 +29,10 @@ export const BarcodeLabel: React.FC<BarcodeLabelProps> = ({
   useEffect(() => {
     if (svgRef.current && barcodeValue) {
       renderBarcodeSvg(svgRef.current, barcodeValue, {
-        width: 1.6,
-        height: 38,
-        fontSize: 10,
-        margin: 2,
+        width: 1.2,
+        height: 28,
+        fontSize: 9,
+        margin: 0,
         textMargin: 1,
         displayValue: true,
       })

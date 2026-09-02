@@ -91,36 +91,47 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           <style>
             @page {
               size: ${selectedPreset.widthMm}mm ${selectedPreset.heightMm}mm;
-              margin: 0;
+              margin: 0 !important;
+              marks: none;
             }
-            body {
-              margin: 0;
-              padding: 0;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
               background: #fff;
               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .sticker {
               width: ${selectedPreset.widthMm}mm;
               height: ${selectedPreset.heightMm}mm;
-              padding: 1.5mm;
+              max-height: ${selectedPreset.heightMm}mm;
+              padding: 1.2mm 1.5mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
               justify-content: space-between;
               align-items: center;
               text-align: center;
-              page-break-after: always;
+              page-break-after: always !important;
+              break-after: page !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
               overflow: hidden;
             }
+            .sticker:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
             .brand {
-              font-size: 8pt;
+              font-size: 7.5pt;
               font-weight: 900;
-              letter-spacing: 1.5px;
+              letter-spacing: 1px;
               text-transform: uppercase;
               line-height: 1;
             }
             .prod-title {
-              font-size: 8.5pt;
+              font-size: 8pt;
               font-weight: 700;
               white-space: nowrap;
               overflow: hidden;
@@ -130,24 +141,24 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
               margin-top: 1px;
             }
             .variant {
-              font-size: 7.5pt;
+              font-size: 7pt;
               font-weight: 800;
               border: 0.5pt solid #000;
               padding: 0 3px;
               border-radius: 2px;
               display: inline-block;
-              line-height: 1.1;
-              margin-top: 1px;
+              line-height: 1;
+              margin-top: 0.5px;
             }
             .barcode-box {
               width: 100%;
               display: flex;
               justify-content: center;
               align-items: center;
-              margin: 1px 0;
+              margin: 0.5px 0;
             }
             .barcode-svg {
-              max-width: 95%;
+              max-width: 100%;
               height: auto;
             }
             .footer {
@@ -155,9 +166,9 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 7.5pt;
+              font-size: 7pt;
               border-top: 0.5pt solid #ccc;
-              padding-top: 1px;
+              padding-top: 0.5px;
               line-height: 1;
             }
             .mrp {
@@ -165,7 +176,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
               color: #666;
             }
             .price {
-              font-size: 9.5pt;
+              font-size: 9pt;
               font-weight: 900;
             }
           </style>
@@ -176,10 +187,11 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
             window.onload = function() {
               JsBarcode(".barcode-svg").init({
                 format: "CODE128",
-                width: 1.4,
-                height: 35,
+                width: 1.2,
+                height: 28,
                 fontSize: 9,
-                margin: 2,
+                margin: 0,
+                textMargin: 1,
                 displayValue: true
               });
               setTimeout(function() {
@@ -202,19 +214,19 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-2xl w-full border border-[#E8D399] shadow-2xl overflow-hidden flex flex-col my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] border border-[#E8D399] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-[#0A0A0A] px-6 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between text-white">
+        <div className="bg-[#0A0A0A] px-5 py-3.5 sm:px-6 sm:py-4 border-b border-[#D4AF37]/30 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1A1A1A] border border-[#D4AF37] flex items-center justify-center text-[#D4AF37]">
-              <Printer size={18} />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1A1A1A] border border-[#D4AF37] flex items-center justify-center text-[#D4AF37]">
+              <Printer size={16} />
             </div>
             <div>
-              <h2 className="text-base font-black tracking-wide text-white">
+              <h2 className="text-sm sm:text-base font-black tracking-wide text-white">
                 Print Barcode Labels ({BRAND_EN})
               </h2>
-              <p className="text-xs text-[#D4AF37] font-semibold">
+              <p className="text-[11px] text-[#D4AF37] font-semibold">
                 Generate physical retail stickers for this SKU
               </p>
             </div>
@@ -227,8 +239,8 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6">
+        {/* Body - Scrollable within max-h-[90vh] */}
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0 hide-scrollbar">
           {/* Barcode Info Card */}
           <div className="bg-[#FBFAF6] border border-[#E8D399] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -334,11 +346,11 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-[#FBFAF6] px-6 py-4 border-t border-[#E8D399] flex items-center justify-between">
+        <div className="bg-[#FBFAF6] px-4 py-3 sm:px-6 sm:py-3.5 border-t border-[#E8D399] flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
+            className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs sm:text-sm hover:bg-gray-100 transition-colors cursor-pointer"
           >
             Cancel
           </button>
