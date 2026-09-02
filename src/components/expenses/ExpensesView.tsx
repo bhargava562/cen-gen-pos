@@ -1,0 +1,386 @@
+import React, { useState, useEffect, useCallback } from 'react'
+import {
+  Download,
+  Plus,
+  Trash2,
+  Calendar,
+  Receipt,
+  RefreshCw,
+  TrendingDown,
+  Layers,
+} from 'lucide-react'
+import {
+  expenseService,
+  exportExpensesToCSV,
+  type ExpenseCategory,
+  type ExpenseRecord,
+  type ExpenseSummaryMetrics,
+} from '../../services/expenseService'
+import { RecordExpenseModal } from './RecordExpenseModal'
+import { ExpenseCategoriesView } from './ExpenseCategoriesView'
+
+export const ExpensesView: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'expenses' | 'categories'>('expenses')
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false)
+
+  // Metrics
+  const [metrics, setMetrics] = useState<ExpenseSummaryMetrics>({
+    today: 0,
+    this_week: 0,
+    this_month: 0,
+    this_year: 0,
+    total_all_time: 0,
+  })
+
+  // Data & Categories
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
+  const [categories, setCategories] = useState<ExpenseCategory[]>([])
+  const [loading, setLoading] = useState(false)
+
+  // Date Filters
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [activePreset, setActivePreset] = useState<'all' | 'today' | 'week' | 'month'>('all')
+
+  const loadMetrics = useCallback(async () => {
+    try {
+      const data = await expenseService.getMetrics()
+      setMetrics(data)
+    } catch (err) {
+      console.warn('Failed to load expense metrics:', err)
+    }
+  }, [])
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await expenseService.getCategories()
+      setCategories(cats)
+    } catch (err) {
+      console.warn('Failed to load categories:', err)
+    }
+  }, [])
+
+  const loadExpenses = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await expenseService.getExpenses({
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      })
+      setExpenses(data)
+    } catch (err) {
+      console.error('Failed to load expenses:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [fromDate, toDate])
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadMetrics(), loadCategories(), loadExpenses()])
+  }, [loadMetrics, loadCategories, loadExpenses])
+
+  useEffect(() => {
+    void refreshAll()
+  }, [refreshAll])
+
+  // Handle Preset Clicks (Synchronizes FROM and TO dates)
+  const applyDatePreset = (preset: 'all' | 'today' | 'week' | 'month') => {
+    setActivePreset(preset)
+    const today = new Date()
+    const todayStr = today.toISOString().slice(0, 10)
+
+    if (preset === 'all') {
+      setFromDate('')
+      setToDate('')
+    } else if (preset === 'today') {
+      setFromDate(todayStr)
+      setToDate(todayStr)
+    } else if (preset === 'week') {
+      const dayOfWeek = (today.getDay() + 6) % 7
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - dayOfWeek)
+      setFromDate(monday.toISOString().slice(0, 10))
+      setToDate(todayStr)
+    } else if (preset === 'month') {
+      const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+      setFromDate(monthStart)
+      setToDate(todayStr)
+    }
+  }
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!window.confirm('Delete this expense record?')) return
+    try {
+      await expenseService.deleteExpense(id)
+      setExpenses((prev) => prev.filter((e) => e.id !== id))
+      void loadMetrics()
+    } catch (err) {
+      console.error('Failed to delete expense:', err)
+      alert('Could not delete expense record')
+    }
+  }
+
+  const handleExpenseSaved = (newExpense: ExpenseRecord) => {
+    setExpenses((prev) => [newExpense, ...prev])
+    void loadMetrics()
+  }
+
+  const formatCurrencyValue = (val: number) => {
+    return `₹ ${Number(val || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Top Header & Tab Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+        <div>
+          <h2 className="text-xl font-black uppercase tracking-wider text-[#0A0A0A] flex items-center gap-2">
+            <Receipt size={22} className="text-[#D4AF37]" />
+            Expense Tracker
+          </h2>
+          <p className="text-xs text-gray-500 font-bold mt-0.5">
+            Monitor store overheads, operating costs, and categorized expenses
+          </p>
+        </div>
+
+        {/* View Switch Pills */}
+        <div className="flex items-center gap-2 bg-[#FBFAF6] p-1.5 rounded-2xl border border-[#E8D399]">
+          <button
+            type="button"
+            onClick={() => setActiveTab('expenses')}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'expenses'
+                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                : 'text-gray-700 hover:text-black'
+            }`}
+          >
+            Expenses
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('categories')}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'categories'
+                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                : 'text-gray-700 hover:text-black'
+            }`}
+          >
+            Categories
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'categories' ? (
+        <ExpenseCategoriesView
+          categories={categories}
+          onCategoriesUpdated={() => {
+            void loadCategories()
+            void loadExpenses()
+          }}
+        />
+      ) : (
+        <div className="space-y-6">
+          {/* 5 KPI Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            {[
+              { label: 'Today', value: metrics.today },
+              { label: 'This Week', value: metrics.this_week },
+              { label: 'This Month', value: metrics.this_month },
+              { label: 'This Year', value: metrics.this_year },
+              { label: 'Total All Time', value: metrics.total_all_time },
+            ].map((kpi, idx) => (
+              <div
+                key={idx}
+                className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs flex flex-col justify-between hover:border-[#D4AF37]/50 transition-all group"
+              >
+                <div className="flex items-center justify-between gap-1 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+                    {kpi.label}
+                  </span>
+                  <div className="w-6 h-6 rounded-lg bg-[#FBFAF6] border border-[#E8D399]/60 flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition-transform">
+                    <TrendingDown size={13} />
+                  </div>
+                </div>
+                <div className="text-base sm:text-lg font-black text-[#0A0A0A] tracking-tight">
+                  {formatCurrencyValue(kpi.value)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-xs space-y-3.5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Date Filters & Presets */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => {
+                        setFromDate(e.target.value)
+                        setActivePreset('all')
+                      }}
+                      className="h-10 pl-8 pr-2.5 rounded-xl border border-gray-300 bg-[#FAFAFA] text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    />
+                    <Calendar size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                  <span className="text-xs font-bold text-gray-400">to</span>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => {
+                        setToDate(e.target.value)
+                        setActivePreset('all')
+                      }}
+                      className="h-10 pl-8 pr-2.5 rounded-xl border border-gray-300 bg-[#FAFAFA] text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    />
+                    <Calendar size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Preset Buttons */}
+                <div className="flex items-center gap-1.5 bg-[#FAFAFA] p-1 rounded-xl border border-gray-200">
+                  {(['all', 'today', 'week', 'month'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => applyDatePreset(p)}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        activePreset === p
+                          ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-xs'
+                          : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      {p === 'all' ? 'All Time' : p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'Month'}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void refreshAll()}
+                  title="Refresh Expenses"
+                  className="h-10 w-10 rounded-xl border border-gray-300 bg-white flex items-center justify-center text-gray-600 hover:text-black hover:border-black transition-all cursor-pointer"
+                >
+                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => exportExpensesToCSV(expenses)}
+                  disabled={expenses.length === 0}
+                  className="h-10 px-4 rounded-xl border border-gray-300 bg-white text-xs font-black uppercase tracking-wider text-gray-800 hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-40"
+                >
+                  <Download size={14} /> Export CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRecordModalOpen(true)}
+                  className="h-10 px-4 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <Plus size={15} /> Record Expense
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Expenses Table */}
+          <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-5 border-b border-gray-100 bg-[#FAFAFA] flex items-center justify-between">
+              <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
+                Expense Records ({expenses.length})
+              </h4>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-[#FBFAF6]">
+                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                      Date
+                    </th>
+                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                      Category
+                    </th>
+                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                      Description
+                    </th>
+                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600 text-right">
+                      Amount (₹)
+                    </th>
+                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600 text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-10 text-center text-gray-400 font-bold">
+                        <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-[#D4AF37]" />
+                        Loading expenses...
+                      </td>
+                    </tr>
+                  ) : expenses.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-12 text-center text-gray-400 font-bold">
+                        <Layers size={32} className="mx-auto mb-2 opacity-30" />
+                        No expense records found for the selected period.
+                      </td>
+                    </tr>
+                  ) : (
+                    expenses.map((exp) => (
+                      <tr key={exp.id} className="hover:bg-gray-50/70 transition-colors">
+                        <td className="px-5 py-3.5 font-bold text-gray-900 whitespace-nowrap">
+                          {exp.expense_date}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#FBFAF6] text-[#0A0A0A] border border-[#E8D399]">
+                            {exp.category_name}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-gray-700 max-w-[280px] truncate">
+                          {exp.description || '—'}
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-black text-sm text-[#0A0A0A] whitespace-nowrap">
+                          {formatCurrencyValue(exp.amount)}
+                        </td>
+                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExpense(exp.id)}
+                            title="Delete record"
+                            className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-rose-50 hover:text-rose-600 text-gray-500 inline-flex items-center justify-center transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Record Expense Modal */}
+          <RecordExpenseModal
+            isOpen={isRecordModalOpen}
+            onClose={() => setIsRecordModalOpen(false)}
+            onSuccess={handleExpenseSaved}
+            categories={categories}
+          />
+        </div>
+      )}
+    </div>
+  )
+}

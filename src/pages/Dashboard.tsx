@@ -3,7 +3,7 @@ import {
   BarChart2, Trash2, Edit2, List, ShoppingCart, LayoutDashboard,
   Box, AlertCircle, ArrowUp, ArrowDown, Power, Download, TrendingUp,
   Package, Search, RefreshCw, ShieldCheck, ShieldOff, Trophy,
-  MessageCircle, ChevronDown, Eye, FileText, Printer, MoreVertical, X, Layers,
+  MessageCircle, ChevronDown, Eye, FileText, Printer, MoreVertical, X, Layers, Receipt,
 } from 'lucide-react'
 
 // Custom Malaysian Ringgit icon — replaces the generic dollar-sign icon
@@ -51,6 +51,7 @@ import Pos from './Pos'
 import AdvanceOrders from './AdvanceOrders'
 import type { AdvanceOrder } from '../services/advanceOrderService'
 import { InventoryTable } from '../components/inventory/InventoryTable'
+import { ExpensesView } from '../components/expenses/ExpensesView'
 import { BRAND_EN, BRAND_LOGO } from '../lib/brand'
 import {
   ResponsiveContainer,
@@ -81,7 +82,7 @@ type DashboardCoupon = {
   usage_count: number
   min_order_value: number
 }
-type TabKey = 'overview' | 'whatsapp' | 'pos_analytics' | 'billing' | 'advance_orders' | 'inventory' | 'products' | 'categories' | 'coupons' | 'users' | 'history'
+type TabKey = 'overview' | 'whatsapp' | 'pos_analytics' | 'billing' | 'advance_orders' | 'inventory' | 'expenses' | 'products' | 'categories' | 'coupons' | 'users' | 'history'
 type PosAnalyticsTab = 'revenue' | 'today' | 'products' | 'categories' | 'coupons'
 type ProfileUser = { id: string; email: string; name: string; mobile: string; role: string; created_at: string }
 
@@ -165,9 +166,13 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const role = useAdminAuthStore(state => state.role)
   const [tab, setTab] = useState<TabKey>(() => {
+    const params = new URLSearchParams(location.search)
+    const tabParam = params.get('tab') as TabKey | null
+    if (tabParam) return tabParam
     if (location.pathname === '/whatsapp-center') return 'whatsapp'
     if (location.pathname === '/pos-analytics' && role === 'admin') return 'pos_analytics'
     if (location.pathname === '/advance-orders') return 'advance_orders'
+    if (location.pathname === '/expenses' || location.pathname === '/dashboard/expenses') return 'expenses'
     return 'billing'
   })
   const [posAnalyticsTab, setPosAnalyticsTab] = useState<PosAnalyticsTab>('revenue')
@@ -1442,6 +1447,7 @@ export default function Dashboard() {
     { id: 'billing',       icon: <ShoppingCart size={20} />,     label: 'Billing Panel' },
     { id: 'inventory',     icon: <Layers size={20} />,           label: 'Inventory & Barcodes' },
     { id: 'advance_orders',icon: <FileText size={20} />,         label: 'Advance Orders' },
+    { id: 'expenses',      icon: <Receipt size={20} />,          label: 'Expenses' },
     { id: 'categories',    icon: <Package size={20} />,           label: 'Categories' },
     { id: 'history',       icon: <List size={20} />,             label: 'Order History' },
     { id: 'pos_analytics', icon: <BarChart2 size={20} />,        label: 'Analytics Dashboard' },
@@ -3856,6 +3862,11 @@ export default function Dashboard() {
               - {l('Role changes take effect upon next login.', 'பங்கு மாற்றம் அடுத்த முறை உள்நுழைந்தால் நடைமுறைக்கு வரும்.')}
             </p>
           </div>
+        )}
+
+        {/* ── EXPENSES TAB ── */}
+        {tab === 'expenses' && (
+          <ExpensesView />
         )}
         </div>
         {/* Footer */}
