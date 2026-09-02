@@ -11,7 +11,6 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { useProductStore, useVariantStore, useAdminAuthStore, type Product } from '../store/store'
 import { Invoice } from '../components/Invoice'
 import CatalogModal from '../components/CatalogModal'
-import AddProductModal from '../components/AddProductModal'
 import { invoicePdfFile } from '../lib/invoicePdf'
 import { uploadInvoicePdf } from '../lib/storage'
 import { createOrderWithStock } from '../services/orderService'
@@ -151,7 +150,6 @@ export default function Pos(props: PosProps = {}) {
   const [gstInput, setGstInput] = useState('')
   const [gstType, setGstType] = useState<'percent' | 'flat'>('percent')
   const [catalogOpen, setCatalogOpen] = useState(false)
-  const [addProductOpen, setAddProductOpen] = useState(false)
   const [depositOpen, setDepositOpen] = useState(false)
   const [depositCreated, setDepositCreated] = useState<AdvanceOrder | null>(null)
   const [depositForm, setDepositForm] = useState({ amount: '', expectedDeliveryDate: '', paymentMethod: 'cash' as AdvancePaymentMethod, address: '', remarks: '', referenceNumber: '' })
@@ -340,47 +338,7 @@ export default function Pos(props: PosProps = {}) {
     })
   }
 
-  // Manual product addition (minimal, non-destructive)
-  const [manualName, setManualName] = useState('')
-  const [manualPrice, setManualPrice] = useState('')
-  const [customItemOpen, setCustomItemOpen] = useState(false)
-  const addManualItem = () => {
-    setError('')
-    const name = manualName.trim()
-    const price = Number(manualPrice || 0)
-    if (!name) { setError(l('Enter product name', 'பொருள் பெயர் உள்ளிடவும்')); return }
-    if (price < 0) { setError(l('Enter valid price', 'சரியான விலை உள்ளிடவும்')); return }
-    const prod: Product = {
-      id: `manual-${Date.now()}`,
-      name,
-      category: 'Manual',
-      remedy: [],
-      price,
-      offerPrice: null,
-      unitType: 'unit',
-      unitLabel: 'pc',
-      baseQuantity: 1,
-      stockQuantity: 999,
-      stockUnit: 'pc',
-      allowDecimalQuantity: false,
-      predefinedOptions: [],
-      isActive: true,
-      sortOrder: 0,
-      unit: '1pc',
-      rating: 5,
-      stock: 999,
-      description: '',
-      benefits: '',
-      image: '/product-placeholder.svg',
-      imageUrl: undefined,
-      source: 'manual',
-    }
-    setManualName('')
-    setManualPrice('')
-    setCustomItemOpen(false)
-    setItems(cur => [...cur, { ...makePosItem(prod), source: 'manual' }])
-    setMobilePanelView('catalogue')
-  }
+
 
   const removeItem = (id: string | number) => setItems(cur => cur.filter(i => i.id !== id))
 
@@ -967,61 +925,23 @@ export default function Pos(props: PosProps = {}) {
                 <BarcodeScannerInput onItemScanned={handleScannedItem} />
               </div>
 
-              <div className="grid grid-cols-2 md:flex md:items-stretch gap-2 pt-1">
+              <div className="flex items-center gap-2.5 pt-1">
                 <button
+                  type="button"
                   onClick={clearAll}
-                  className="min-h-[40px] w-full md:w-auto px-3 py-2 rounded-xl border border-gray-300 text-[12px] md:text-[11px] font-black text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 text-center md:flex-1"
+                  disabled={items.length === 0}
+                  className="h-10 px-4 rounded-xl border border-gray-300 text-xs font-black text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
                 >
-                  <Trash2 size={12} /> CLEAR ORDER
+                  <Trash2 size={13} /> CLEAR ORDER
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCatalogOpen(true)}
-                  className="min-h-[40px] w-full md:w-auto px-3 py-2 rounded-xl border border-[#E8D399] bg-[#FBFAF6] text-[#0A0A0A] text-[12px] md:text-[11px] font-black hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 text-center md:flex-1"
+                  className="flex-1 h-10 px-4 rounded-xl bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Search size={12} /> SEARCH CATALOG
-                </button>
-                <button
-                  onClick={() => setAddProductOpen(true)}
-                  className="min-h-[40px] w-full md:w-auto px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] text-[12px] md:text-[11px] font-black hover:bg-[#1A1A1A] transition-colors flex items-center justify-center gap-1.5 text-center md:flex-1"
-                >
-                  <Plus size={12} /> ADD TO CATALOG
-                </button>
-                <button
-                  onClick={() => setCustomItemOpen(open => !open)}
-                  className="min-h-[40px] w-full md:w-auto px-3 py-2 rounded-xl border border-gray-300 text-gray-800 text-[12px] md:text-[11px] font-black hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 text-center md:flex-1"
-                >
-                  + ADD CUSTOM ITEM
+                  <Search size={14} /> SEARCH CATALOG &amp; ADD ITEMS
                 </button>
               </div>
-              {customItemOpen && (
-                <form
-                  onSubmit={e => { e.preventDefault(); addManualItem() }}
-                  className="mt-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_150px_auto] gap-2 rounded-xl border border-gray-200 bg-[#FFFDFC] p-3"
-                >
-                  <input
-                    autoFocus
-                    required
-                    value={manualName}
-                    onChange={e => setManualName(e.target.value)}
-                    placeholder="Product name"
-                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-[12px] font-bold text-[#111111] outline-none focus:border-[#D4AF37]"
-                  />
-                  <input
-                    step="0.01"
-                    type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                    value={manualPrice}
-                    onChange={e => setManualPrice(e.target.value)}
-                    placeholder="Price (₹, optional)"
-                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-[12px] font-bold text-[#111111] outline-none focus:border-[#D4AF37]"
-                  />
-                  <button
-                    type="submit"
-                    className="h-10 rounded-lg bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] px-4 text-[11px] font-black hover:bg-[#1A1A1A]"
-                  >
-                    ADD ITEM
-                  </button>
-                </form>
-              )}
             </div>
 
             {/* Table Header */}
@@ -1503,14 +1423,6 @@ export default function Pos(props: PosProps = {}) {
             addItem(p)
             setCatalogOpen(false)
           }}
-        />
-      )}
-
-      {addProductOpen && (
-        <AddProductModal
-          isOpen={addProductOpen}
-          onClose={() => setAddProductOpen(false)}
-          onSuccess={() => {}}
         />
       )}
     </div>

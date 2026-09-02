@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Camera, X, AlertCircle, Sparkles, ScanLine } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Camera, X, AlertCircle, Sparkles, ScanLine, SwitchCamera } from 'lucide-react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { barcodeService } from '../../services/barcodeService'
 import { BRAND_EN } from '../../lib/brand'
@@ -35,12 +35,18 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
 
   // Camera scanner state
   const [isCameraOpen, setIsCameraOpen] = useState(false)
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Hardware Scanner buffer
-  const bufferRef = useRef<{ code: string; lastTime: number }>({ code: '', lastTime: 0 })
+  // Hardware Scanner buffer (tracking keystroke timing)
+  const bufferRef = useRef<{ code: string; lastTime: number; targetInput: HTMLInputElement | HTMLTextAreaElement | null }>({
+    code: '',
+    lastTime: 0,
+    targetInput: null,
+  })
 
   // Audio Beep generator via Web Audio API
   const playBeep = (isSuccess = true) => {
@@ -66,7 +72,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
   }
 
   // Handle scanned barcode lookup
-  const processBarcode = async (barcodeVal: string) => {
+  const processBarcode = useCallback(async (barcodeVal: string) => {
     const clean = barcodeVal.trim()
     if (!clean) return
 
@@ -85,7 +91,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
       const prod = record.product
       const varnt = record.variant
 
-      const effectiveStock = varnt ? (Number(varnt.stock) || 0) : 999 // Handled at cart level
+      const effectiveStock = varnt ? (Number(varnt.stock) || 0) : 999
 
       const price = varnt?.price ? Number(varnt.price) : Number(prod.price)
 
@@ -108,7 +114,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
       onItemScanned(payload)
       setManualCode('')
 
-      setTimeout(() => setLastScannedName(''), 3000)
+      setTimeout(() => setLastScannedName(''), 3500)
     } catch (err) {
       console.error('Barcode lookup failed:', err)
       playBeep(false)
@@ -116,88 +122,145 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
     } finally {
       setLoading(false)
     }
-  }
+  }, [onItemScanned])
 
-  // Hardware Scanner Listener (USB / Bluetooth barcode readers send rapid keybursts ending with Enter)
+  // Non-Blocking HID Keystroke Interceptor
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If user is focused on a normal text input (other than our hidden/scanner input), let it pass
-      const target = e.target as HTMLElement
-      const isOurInput = target === inputRef.current
-      const isInputOrTextarea = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-
-      if (isInputOrTextarea && !isOurInput) {
-        return
-      }
-
       const now = Date.now()
       const diff = now - bufferRef.current.lastTime
+      const target = e.target as HTMLElement
+      const isInputField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
 
       if (e.key === 'Enter') {
-        if (bufferRef.current.code.length >= 3 && diff < 200) {
+        const buffered = bufferRef.current.code
+        // If rapid keystrokes (< 45ms average) accumulated >= 4 characters
+        if (buffered.length >= 4 && diff < 150) {
           e.preventDefault()
-          const scannedCode = bufferRef.current.code
-          bufferRef.current = { code: '', lastTime: 0 }
-          processBarcode(scannedCode)
-        } else {
-          bufferRef.current = { code: '', lastTime: 0 }
+          e.stopPropagation()
+
+          // If the cashier was focused in an input field, strip the injected barcode text from that field
+          if (isInputField && bufferRef.current.targetInput) {
+            const inputEl = bufferRef.current.targetInput
+            if (inputEl.value && inputEl.value.endsWith(buffered)) {
+              inputEl.value = inputEl.value.slice(0, -buffered.length)
+              // Dispatch input event so React state updates
+              inputEl.dispatchEvent(new Event('input', { bubbles: true }))
+            }
+          }
+
+          bufferRef.current = { code: '', lastTime: 0, targetInput: null }
+          void processBarcode(buffered)
+          return
         }
+
+        bufferRef.current = { code: '', lastTime: 0, targetInput: null }
         return
       }
 
       // Printable single character
-      if (e.key.length === 1) {
-        // If keystroke arrived within 50ms of previous one, it's a hardware scanner burst
-        if (diff > 100) {
-          bufferRef.current.code = e.key
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (diff > 45) {
+          // Slow typing cadence (human typing): start fresh buffer
+          bufferRef.current = {
+            code: e.key,
+            lastTime: now,
+            targetInput: isInputField ? (target as HTMLInputElement | HTMLTextAreaElement) : null,
+          }
         } else {
+          // Rapid typing cadence (< 45ms): hardware barcode scanner burst
           bufferRef.current.code += e.key
+          bufferRef.current.lastTime = now
+          if (isInputField) {
+            bufferRef.current.targetInput = target as HTMLInputElement | HTMLTextAreaElement
+          }
         }
-        bufferRef.current.lastTime = now
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [])
+  }, [processBarcode])
+
+  // Touch Device Detection Helper
+  const isTouchDevice = () => {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  }
+
+  // Handle Input Bar Click on Touch Devices
+  const handleInputBarClick = () => {
+    if (isTouchDevice()) {
+      setIsCameraOpen(true)
+    }
+  }
 
   // Camera scanner lifecycle
   useEffect(() => {
     if (!isCameraOpen) {
       if (readerRef.current) {
-        // ZXing cleanup handled
+        readerRef.current = null
       }
       return
     }
 
     const reader = new BrowserMultiFormatReader()
     readerRef.current = reader
+    let isMounted = true
+
+    // List available video devices
+    BrowserMultiFormatReader.listVideoInputDevices()
+      .then((devices) => {
+        if (!isMounted) return
+        setVideoDevices(devices)
+        if (devices.length > 0) {
+          // Prefer back/environment camera on mobile
+          const backCam = devices.find((d) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'))
+          setSelectedDeviceId(backCam ? backCam.deviceId : devices[0].deviceId)
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not enumerate cameras:', err)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [isCameraOpen])
+
+  // Start video stream when camera modal is active and device is selected
+  useEffect(() => {
+    const videoElement = videoRef.current
+    const readerInstance = readerRef.current
+    if (!isCameraOpen || !videoElement || !readerInstance) return
 
     let isMounted = true
 
-    reader
-      .decodeFromVideoDevice(undefined, videoRef.current || undefined, (result, _err) => {
+    readerInstance
+      .decodeFromVideoDevice(selectedDeviceId || undefined, videoElement, (result, _err) => {
         if (!isMounted) return
         if (result) {
           const text = result.getText()
           if (text) {
             setIsCameraOpen(false)
-            processBarcode(text)
+            void processBarcode(text)
           }
         }
       })
       .catch((err) => {
         console.error('Camera barcode reader error:', err)
-        setErrorMsg('Could not access camera for scanning')
+        setErrorMsg('Camera access denied or unavailable')
       })
 
     return () => {
       isMounted = false
-      // reader.reset()
+      if (videoElement && videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream
+        stream.getTracks().forEach((t) => t.stop())
+      }
     }
-  }, [isCameraOpen])
+  }, [isCameraOpen, selectedDeviceId, processBarcode])
 
   return (
     <div className="w-full space-y-1.5">
@@ -206,7 +269,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (manualCode.trim()) processBarcode(manualCode.trim())
+            if (manualCode.trim()) void processBarcode(manualCode.trim())
           }}
           className="relative flex-1 flex items-center"
         >
@@ -217,9 +280,10 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Scan barcode (USB / Bluetooth / Manual)..."
+            placeholder={isTouchDevice() ? 'Tap to scan with camera or type code...' : 'Scan barcode (Hardware / Camera / Manual)...'}
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
+            onClick={handleInputBarClick}
             disabled={disabled || loading}
             className="w-full pl-10 pr-24 py-3 rounded-2xl border-2 border-[#E8D399] bg-[#FBFAF6] font-bold text-sm text-black placeholder:text-gray-400 outline-none focus:border-[#0A0A0A] focus:bg-white shadow-xs transition-all"
           />
@@ -237,8 +301,8 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
             <button
               type="button"
               onClick={() => setIsCameraOpen(true)}
-              title="Scan with Device Camera"
-              className="p-2 rounded-xl bg-white border border-[#E8D399] text-gray-700 hover:text-black hover:border-black transition-all cursor-pointer"
+              title="Scan with Camera"
+              className="p-2 rounded-xl bg-white border border-[#E8D399] text-gray-700 hover:text-black hover:border-black transition-all cursor-pointer shadow-xs"
             >
               <Camera size={16} />
             </button>
@@ -250,7 +314,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
       {lastScannedName && (
         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-full animate-in fade-in duration-150">
           <Sparkles size={13} className="text-emerald-600" />
-          Scanned: <span className="font-black text-black">{lastScannedName}</span> (+1 qty)
+          Added: <span className="font-black text-black">{lastScannedName}</span> (+1 qty)
         </div>
       )}
 
@@ -262,7 +326,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
         </div>
       )}
 
-      {/* Camera Scanner Modal */}
+      {/* Instant Webcam Scanner Modal */}
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#0A0A0A] rounded-3xl max-w-md w-full border border-[#D4AF37] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 text-white">
@@ -282,11 +346,31 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
             <div className="p-4 flex flex-col items-center">
               <div className="relative w-full aspect-square max-w-[320px] rounded-2xl overflow-hidden border-2 border-[#D4AF37] bg-black">
                 <video ref={videoRef} className="w-full h-full object-cover" />
-                {/* Visual Laser Guide */}
-                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_8px_red] animate-pulse" />
+                {/* Visual Laser Reticle Guide */}
+                <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 h-0.5 bg-red-500 shadow-[0_0_12px_red] animate-pulse" />
+                <div className="absolute inset-6 border-2 border-dashed border-[#D4AF37]/60 rounded-xl pointer-events-none" />
               </div>
+
+              {/* Camera Switcher if multiple devices */}
+              {videoDevices.length > 1 && (
+                <div className="mt-3 flex items-center gap-2 w-full max-w-[320px]">
+                  <SwitchCamera size={15} className="text-[#D4AF37] shrink-0" />
+                  <select
+                    value={selectedDeviceId}
+                    onChange={(e) => setSelectedDeviceId(e.target.value)}
+                    className="w-full bg-[#1A1A1A] border border-gray-700 text-xs font-bold text-white rounded-lg px-2 py-1.5 outline-none focus:border-[#D4AF37]"
+                  >
+                    {videoDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <p className="text-xs text-[#D4AF37] mt-3 text-center font-bold">
-                Point camera at any barcode label on the garment / item
+                Align the red line with the barcode sticker on the product
               </p>
             </div>
           </div>

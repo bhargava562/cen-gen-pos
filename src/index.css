@@ -65,9 +65,13 @@
     text-rendering: optimizeLegibility;
   }
 
-  button, a, input, textarea, select, option, optgroup, table, th, td, label {
+  button, a, input, textarea, select, option, optgroup, label {
     font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  table, thead, tbody, tr, th, td {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif !important;
   }
 
   img {
