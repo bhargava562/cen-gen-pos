@@ -1,7 +1,7 @@
 export const BRAND_EN = 'CLAD'
 export const BRAND_TA = 'CLAD'
 export const BRAND_SUBTITLE = 'Retail Billing & Inventory'
-export const BRAND_LOGO = '/clad-logo.svg'
+export const BRAND_LOGO = '/clad-logo.jpeg'
 
 // Owner / Personal contact
 export const BRAND_OWNER_NAME = 'Rubi krishna'

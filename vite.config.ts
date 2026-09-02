@@ -10,6 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: [
+        'clad-logo.jpeg',
         'clad-logo.svg',
         'pwa-192x192.png',
         'pwa-512x512.png',
