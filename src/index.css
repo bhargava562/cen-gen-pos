@@ -15,7 +15,11 @@
     --brand-text-muted: #6B7280;
   }
 
-  * { box-sizing: border-box; }
+  *, *::before, *::after {
+    box-sizing: border-box;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
+  }
+
   html {
     margin: 0;
     padding: 0;
@@ -27,6 +31,7 @@
     overflow-x: hidden;
     width: 100%;
     max-width: 100vw;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
   }
 
   /* Fluid Typography for Desktops/Laptops (>= 1024px) */
@@ -59,16 +64,32 @@
     max-width: 100vw;
     text-rendering: optimizeLegibility;
   }
-  button, a, input, textarea, select {
+
+  button, a, input, textarea, select, option, optgroup, table, th, td, label {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
+
   img {
     max-width: 100%;
     display: block;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1, h2, h3, h4, h5, h6, .brand-font, .font-brand {
     font-family: 'Cinzel', 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, sans-serif;
     letter-spacing: 0.02em;
+  }
+
+  .font-headline {
+    font-family: 'Cinzel', 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, sans-serif;
+  }
+
+  .font-sans {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', system-ui, -apple-system, sans-serif !important;
+  }
+
+  .font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
   }
 
   .ta-text {

@@ -33,9 +33,9 @@ export default {
         borderLight: '#E5E7EB', // Neutral clean border
       },
       fontFamily: {
-        sans:      ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        brand:     ['"Cinzel"', 'serif'],
-        headline:  ['"Cinzel"', '"Plus Jakarta Sans"', 'sans-serif'],
+        sans:      ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'system-ui', '-apple-system', 'sans-serif'],
+        brand:     ['"Cinzel"', '"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'serif'],
+        headline:  ['"Cinzel"', '"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'sans-serif'],
       },
       boxShadow: {
         soft:   '0 1px 3px rgba(0,0,0,0.05)',
