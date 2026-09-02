@@ -136,12 +136,12 @@ export const InventoryTable: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 4-TAB UNIFIED NAVIGATION BAR */}
-      <div className="bg-white border border-[#E8D399] rounded-2xl p-2 sm:p-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#FBFAF6] border border-gray-200 rounded-xl">
+      <div className="bg-white border border-[#E8D399] rounded-2xl p-2 sm:p-2.5 shadow-sm flex items-center justify-between gap-3 overflow-x-auto hide-scrollbar">
+        <div className="flex items-center gap-1.5 p-1 bg-[#FBFAF6] border border-gray-200 rounded-xl shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('stock')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'stock'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -153,7 +153,7 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('products')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'products'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -165,7 +165,7 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'categories'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -177,7 +177,7 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'analytics'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -187,16 +187,16 @@ export const InventoryTable: React.FC = () => {
           </button>
         </div>
 
-        {/* Global Receive Stock & Barcode CTA */}
+        {/* Global Receive Stock CTA */}
         <button
           type="button"
           onClick={() => {
             setSelectedForReceive(null)
             setShowReceiveModal(true)
           }}
-          className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer"
+          className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
         >
-          <PackagePlus size={15} /> Receive Stock &amp; Barcode
+          <PackagePlus size={15} /> Receive Stock
         </button>
       </div>
 
