@@ -138,11 +138,17 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
       return
     }
 
-    const priceNum = parseFloat(price) || 0
-    const costNum = parseFloat(purchasePrice) || 0
+    const firstVariant = variantRows.find(v => v.variantName.trim())
+    const priceNum = hasVariants && firstVariant ? (Number(firstVariant.price) || 0) : (parseFloat(price) || 0)
+    const costNum = hasVariants && firstVariant ? (Number(firstVariant.costPrice) || 0) : (parseFloat(purchasePrice) || 0)
 
     if (!hasVariants && priceNum <= 0) {
       setStatusMessage({ type: 'error', text: 'Price must be greater than 0' })
+      return
+    }
+
+    if (hasVariants && (!variantRows.length || variantRows.some(v => !v.variantName.trim()))) {
+      setStatusMessage({ type: 'error', text: 'Please provide names for all added variants' })
       return
     }
 
@@ -155,48 +161,76 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
           .from('products')
           .update({
             name: trimmedName,
-            name_ta: nameTa.trim() || null,
-            category_id: categoryId ? Number(categoryId) : null,
+            name_ta: nameTa.trim() || '',
+            category_id: categoryId ? Number(categoryId) : 1,
             price: priceNum,
             offer_price: priceNum,
             purchase_price: costNum,
-            barcode: barcode.trim() || null,
-            description: description.trim() || null,
+            barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
+            description: description.trim() || '',
             has_variants: hasVariants && variantRows.length > 0,
           })
           .eq('id', selectedProductId)
 
         if (updErr) throw updErr
 
-        // Process new variant rows if added
+        // Process variant rows
         if (hasVariants && variantRows.length > 0) {
           for (const v of variantRows) {
-            // Check if it's a newly added row (id starts with 'var_')
-            if (v.id.startsWith('var_') && v.variantName.trim()) {
+            if (!v.variantName.trim()) continue
+
+            const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
+            const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
+            const vQty = Math.max(0, v.noOfLabels || 0)
+
+            if (v.id.startsWith('var_')) {
+              // Insert newly added variant
               const { data: createdVar, error: vErr } = await supabase
                 .from('product_variants')
                 .insert({
                   product_id: selectedProductId,
                   variant_name: v.variantName.trim(),
                   size_label: v.sizeLabel?.trim() || v.variantName.trim(),
-                  price: v.price > 0 ? v.price : priceNum,
-                  purchase_price: v.costPrice > 0 ? v.costPrice : costNum,
+                  price: vPrice,
+                  purchase_price: vCost,
                   stock: 0,
                   is_active: true,
                 })
                 .select()
                 .single()
 
-              if (!vErr && createdVar) {
-                // Call atomic RPC to receive initial stock if > 0
+              if (!vErr && createdVar && vQty > 0) {
                 await supabase.rpc('create_barcode_and_receive_stock', {
                   p_product_id: selectedProductId,
                   p_variant_id: createdVar.id,
-                  p_quantity_received: Math.max(0, v.noOfLabels || 0),
-                  p_unit_cost: v.costPrice || null,
+                  p_quantity_received: vQty,
+                  p_unit_cost: vCost || null,
                   p_created_by_name: 'Admin',
                   p_custom_barcode: v.customBarcode?.trim() || null,
                   p_note: `Added variant ${v.variantName.trim()}`,
+                })
+              }
+            } else {
+              // Update existing variant
+              await supabase
+                .from('product_variants')
+                .update({
+                  variant_name: v.variantName.trim(),
+                  size_label: v.sizeLabel?.trim() || v.variantName.trim(),
+                  price: vPrice,
+                  purchase_price: vCost,
+                })
+                .eq('id', v.id)
+
+              if (vQty > 0) {
+                await supabase.rpc('create_barcode_and_receive_stock', {
+                  p_product_id: selectedProductId,
+                  p_variant_id: v.id,
+                  p_quantity_received: vQty,
+                  p_unit_cost: vCost || null,
+                  p_created_by_name: 'Admin',
+                  p_custom_barcode: v.customBarcode?.trim() || null,
+                  p_note: `Received stock for variant ${v.variantName.trim()}`,
                 })
               }
             }
@@ -210,13 +244,13 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
           .from('products')
           .insert({
             name: trimmedName,
-            name_ta: nameTa.trim() || null,
-            category_id: categoryId ? Number(categoryId) : null,
+            name_ta: nameTa.trim() || '',
+            category_id: categoryId ? Number(categoryId) : 1,
             price: priceNum,
             offer_price: priceNum,
             purchase_price: costNum,
             barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
-            description: description.trim() || null,
+            description: description.trim() || '',
             has_variants: hasVariants && variantRows.length > 0,
             stock_quantity: 0,
             stock: 0,
@@ -231,8 +265,8 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
         if (hasVariants && variantRows.length > 0) {
           for (const v of variantRows) {
             if (v.variantName.trim()) {
-              const vPrice = v.price > 0 ? v.price : priceNum
-              const vCost = v.costPrice > 0 ? v.costPrice : costNum
+              const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
+              const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
               const vQty = Math.max(0, v.noOfLabels || 0)
 
               const { data: createdVar, error: vErr } = await supabase
@@ -249,7 +283,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                 .select()
                 .single()
 
-              if (!vErr && createdVar) {
+              if (!vErr && createdVar && vQty > 0) {
                 await supabase.rpc('create_barcode_and_receive_stock', {
                   p_product_id: newProd.id,
                   p_variant_id: createdVar.id,
@@ -447,42 +481,44 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               )}
             </div>
 
-            {/* Pricing Section */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
-              <span className="text-[11px] font-black uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
-                <Tag size={13} className="text-[#D4AF37]" /> {hasVariants ? 'Base Pricing' : 'Pricing & Margin'}
-              </span>
+            {/* Pricing Section (Standard Products Only) */}
+            {!hasVariants && (
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                  <Tag size={13} className="text-[#D4AF37]" /> Pricing &amp; Margin
+                </span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
-                    Sale Price (₹) {!hasVariants && <span className="text-red-500">*</span>}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm font-black text-gray-900 outline-none focus:border-[#0A0A0A]"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                      Sale Price (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm font-black text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
-                    Purchase / Cost Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
-                  />
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                      Purchase / Cost Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-sm font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Multi-Variant Section */}
             <div className="border border-gray-200 rounded-2xl p-4 bg-white space-y-3">
