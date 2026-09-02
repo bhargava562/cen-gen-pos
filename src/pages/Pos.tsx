@@ -27,7 +27,7 @@ import {
 import { buildProfessionalWhatsAppMessage, buildAdvanceDepositWhatsAppMessage } from '../lib/whatsappMessage'
 import { normalizePhone, toWhatsAppUrl } from '../lib/phone'
 import { useLangStore } from '../store/langStore'
-import type { ProductVariant } from '../services/variantService'
+import { fetchVariantsByProduct, type ProductVariant } from '../services/variantService'
 import { BarcodeScannerInput, type ScannedItemPayload } from '../components/pos/BarcodeScannerInput'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -144,6 +144,7 @@ export default function Pos(props: PosProps = {}) {
   const [mobilePanelView, setMobilePanelView] = useState<'catalogue' | 'bill'>('catalogue')
   const [ordermode, setOrdermode] = useState<'online' | 'offline'>('offline')
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null)
+  const [availableVariants, setAvailableVariants] = useState<ProductVariant[]>([])
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [variantPickerQty, setVariantPickerQty] = useState(1)
   const [billGstEnabled, setBillGstEnabled] = useState(false)
@@ -231,27 +232,71 @@ export default function Pos(props: PosProps = {}) {
   }, [items])
 
   // ── Cart actions ──────────────────────────────────────────────────────
-  const addItem = (product: Product) => {
-    // For variant products, open variant picker instead of adding directly
-    if (product.hasVariants) {
-      const variants = getVariants(String(product.id))
-      if (variants.length > 0) {
-        setVariantPickerProduct(product)
-        setSelectedVariant(variants[0])
-        setVariantPickerQty(1)
-        return
-      }
-    }
+  const addItem = async (product: Product, specificVariant?: ProductVariant) => {
     setError('')
     setMobilePanelView('catalogue')
+
+    if (specificVariant) {
+      const variantProduct: Product = {
+        ...product,
+        id: specificVariant.id,
+        name: `${product.name} - ${specificVariant.variantName}`,
+        price: specificVariant.price,
+        offerPrice: null,
+        stock: specificVariant.stock,
+        stockQuantity: specificVariant.stock,
+        hasVariants: false,
+        unitType: 'unit',
+        baseQuantity: 1,
+        unitLabel: specificVariant.sizeLabel || specificVariant.variantName || 'piece',
+      }
+      setItems(cur => {
+        const ex = cur.find(i => (i.variantId === specificVariant.id || String(i.id) === String(specificVariant.id)))
+        if (!ex) {
+          const item = makePosItem(variantProduct, 1)
+          item.variantId = specificVariant.id
+          item.variantName = specificVariant.variantName
+          item.parentProductId = String(product.id)
+          return [item, ...cur]
+        }
+        return cur.map(i => (i.variantId === specificVariant.id || String(i.id) === String(specificVariant.id)) ? recalc(i, i.qty + 1) : i)
+      })
+      return
+    }
+
+    // If product has variants, check its variants from DB or store
+    if (product.hasVariants) {
+      try {
+        let vars = getVariants(String(product.id))
+        if (!vars || vars.length === 0) {
+          vars = await fetchVariantsByProduct(String(product.id))
+        }
+
+        if (vars && vars.length > 1) {
+          // Multiple variants: open variant picker
+          setAvailableVariants(vars)
+          setVariantPickerProduct(product)
+          setSelectedVariant(vars[0])
+          setVariantPickerQty(1)
+          return
+        } else if (vars && vars.length === 1) {
+          // Only 1 variant: add it directly
+          void addItem(product, vars[0])
+          return
+        }
+      } catch (err) {
+        console.warn('Failed to load variants for product:', err)
+      }
+    }
+
+    // Standard non-variant product
     setItems(cur => {
-      const ex = cur.find(i => i.id === product.id)
-      if (!ex) return [...cur, makePosItem(product)]
-      return cur.map(i => i.id === product.id ? recalc(i, i.qty + 1) : i)
+      const ex = cur.find(i => String(i.id) === String(product.id))
+      if (!ex) return [makePosItem(product), ...cur]
+      return cur.map(i => String(i.id) === String(product.id) ? recalc(i, i.qty + 1) : i)
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const addVariantToItems = () => {
     if (!variantPickerProduct || !selectedVariant) return
     setError('')
@@ -270,19 +315,20 @@ export default function Pos(props: PosProps = {}) {
     }
     const addQty = Math.max(1, variantPickerQty)
     setItems(cur => {
-      const ex = cur.find(i => i.id === variantProduct.id)
+      const ex = cur.find(i => (i.variantId === selectedVariant.id || String(i.id) === String(selectedVariant.id)))
       if (!ex) {
         const item = makePosItem(variantProduct, addQty)
-        item.variantId       = selectedVariant.id
-        item.variantName     = selectedVariant.variantName
+        item.variantId = selectedVariant.id
+        item.variantName = selectedVariant.variantName
         item.parentProductId = String(variantPickerProduct.id)
-        return [...cur, item]
+        return [item, ...cur]
       }
-      return cur.map(i => i.id === variantProduct.id ? recalc(i, i.qty + addQty) : i)
+      return cur.map(i => (i.variantId === selectedVariant.id || String(i.id) === String(selectedVariant.id)) ? recalc(i, i.qty + addQty) : i)
     })
     setVariantPickerProduct(null)
     setSelectedVariant(null)
     setVariantPickerQty(1)
+    setAvailableVariants([])
     setMobilePanelView('catalogue')
   }
 
@@ -1420,10 +1466,100 @@ export default function Pos(props: PosProps = {}) {
           isOpen={catalogOpen}
           onClose={() => setCatalogOpen(false)}
           onAdd={(p) => {
-            addItem(p)
+            void addItem(p)
             setCatalogOpen(false)
           }}
         />
+      )}
+
+      {/* Variant Picker Modal for Multi-Variant Products */}
+      {variantPickerProduct && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-[#E8D399] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-[#FBFAF6]">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-[#0A0A0A]">
+                  Select Variant / Size
+                </h3>
+                <p className="text-xs text-gray-500 font-bold">
+                  {variantPickerProduct.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setVariantPickerProduct(null)
+                  setAvailableVariants([])
+                }}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-700 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="space-y-2">
+                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-600">
+                  Available Sizes &amp; Options ({availableVariants.length})
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
+                  {availableVariants.map((v) => (
+                    <div
+                      key={v.id}
+                      onClick={() => setSelectedVariant(v)}
+                      className={`p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                        selectedVariant?.id === v.id
+                          ? 'border-[#0A0A0A] bg-[#FFF9E6] shadow-xs'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-black text-xs text-gray-900">
+                        {v.variantName}
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-1 border-t border-gray-100 text-[11px]">
+                        <span className="font-black text-black">₹{v.price}</span>
+                        <span className="text-[10px] text-emerald-700 font-bold">Stock: {v.stock}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quantity Stepper */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FBFAF6] border border-gray-200">
+                <span className="text-xs font-black uppercase tracking-wider text-gray-700">Quantity</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setVariantPickerQty((q) => Math.max(1, q - 1))}
+                    className="w-8 h-8 rounded-xl border border-gray-300 bg-white font-black text-sm flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                  >
+                    -
+                  </button>
+                  <span className="font-black text-sm text-black min-w-[20px] text-center">
+                    {variantPickerQty}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setVariantPickerQty((q) => q + 1)}
+                    className="w-8 h-8 rounded-xl border border-gray-300 bg-white font-black text-sm flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Button */}
+              <button
+                type="button"
+                onClick={addVariantToItems}
+                className="w-full py-3 rounded-2xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Add to Order (₹{((selectedVariant?.price || variantPickerProduct.price || 0) * variantPickerQty).toFixed(2)})
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
