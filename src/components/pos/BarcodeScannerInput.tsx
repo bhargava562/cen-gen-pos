@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Camera, X, AlertCircle, Sparkles, ScanLine, SwitchCamera } from 'lucide-react'
-import { BrowserMultiFormatReader } from '@zxing/browser'
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { barcodeService } from '../../services/barcodeService'
 import { BRAND_EN } from '../../lib/brand'
 
@@ -39,7 +39,55 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
+  const controlsRef = useRef<IScannerControls | null>(null)
+  const activeStreamRef = useRef<MediaStream | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Explicit camera stop helper ensuring ALL camera hardware resources & tracks are released
+  const stopCamera = useCallback(() => {
+    if (controlsRef.current) {
+      try {
+        controlsRef.current.stop()
+      } catch (e) {
+        console.warn('Could not stop ZXing scanner controls:', e)
+      }
+      controlsRef.current = null
+    }
+
+    if (activeStreamRef.current) {
+      try {
+        activeStreamRef.current.getTracks().forEach((track) => {
+          track.stop()
+          track.enabled = false
+        })
+      } catch (e) {
+        console.warn('Could not stop active stream tracks:', e)
+      }
+      activeStreamRef.current = null
+    }
+
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        const stream = videoRef.current.srcObject as MediaStream
+        stream.getTracks().forEach((track) => {
+          track.stop()
+          track.enabled = false
+        })
+        videoRef.current.srcObject = null
+      } catch (e) {
+        console.warn('Could not stop video element stream:', e)
+      }
+    }
+
+    if (readerRef.current) {
+      readerRef.current = null
+    }
+  }, [])
+
+  const handleCloseCamera = useCallback(() => {
+    stopCamera()
+    setIsCameraOpen(false)
+  }, [stopCamera])
 
   // Hardware Scanner buffer (tracking keystroke timing)
   const bufferRef = useRef<{ code: string; lastTime: number; targetInput: HTMLInputElement | HTMLTextAreaElement | null }>({
@@ -199,9 +247,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
   // Camera scanner lifecycle
   useEffect(() => {
     if (!isCameraOpen) {
-      if (readerRef.current) {
-        readerRef.current = null
-      }
+      stopCamera()
       return
     }
 
@@ -226,8 +272,9 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
 
     return () => {
       isMounted = false
+      stopCamera()
     }
-  }, [isCameraOpen])
+  }, [isCameraOpen, stopCamera])
 
   // Start video stream when camera modal is active and device is selected
   useEffect(() => {
@@ -237,30 +284,56 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
 
     let isMounted = true
 
-    readerInstance
-      .decodeFromVideoDevice(selectedDeviceId || undefined, videoElement, (result, _err) => {
+    const decodePromise = readerInstance.decodeFromVideoDevice(
+      selectedDeviceId || undefined,
+      videoElement,
+      (result, _err) => {
         if (!isMounted) return
         if (result) {
           const text = result.getText()
           if (text) {
+            stopCamera()
             setIsCameraOpen(false)
             void processBarcode(text)
           }
         }
+      }
+    )
+
+    decodePromise
+      .then((controls) => {
+        if (!isMounted) {
+          controls.stop()
+        } else {
+          controlsRef.current = controls
+          if (videoElement.srcObject) {
+            activeStreamRef.current = videoElement.srcObject as MediaStream
+          }
+        }
       })
       .catch((err) => {
+        if (!isMounted) return
         console.error('Camera barcode reader error:', err)
         setErrorMsg('Camera access denied or unavailable')
       })
 
     return () => {
       isMounted = false
-      if (videoElement && videoElement.srcObject) {
-        const stream = videoElement.srcObject as MediaStream
-        stream.getTracks().forEach((t) => t.stop())
+      stopCamera()
+    }
+  }, [isCameraOpen, selectedDeviceId, processBarcode, stopCamera])
+
+  // Listen for Escape key to close camera
+  useEffect(() => {
+    if (!isCameraOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseCamera()
       }
     }
-  }, [isCameraOpen, selectedDeviceId, processBarcode])
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isCameraOpen, handleCloseCamera])
 
   return (
     <div className="w-full space-y-1.5">
@@ -328,7 +401,12 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
 
       {/* Instant Webcam Scanner Modal */}
       {isCameraOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseCamera()
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        >
           <div className="bg-[#0A0A0A] rounded-3xl max-w-md w-full border border-[#D4AF37] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 text-white">
             <div className="px-5 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -336,7 +414,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
                 <span className="font-black text-sm text-white">Camera Barcode Scanner</span>
               </div>
               <button
-                onClick={() => setIsCameraOpen(false)}
+                onClick={handleCloseCamera}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
               >
                 <X size={16} />
