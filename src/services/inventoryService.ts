@@ -13,6 +13,8 @@ export interface InventoryStockItem {
   stock: number
   price: number
   offer_price?: number
+  purchase_price?: number
+  cost_price?: number
   unit?: string
   unit_type?: string
   category?: string
@@ -87,7 +89,7 @@ export const inventoryService = {
     // 1. Fetch products
     const { data: products, error: prodErr } = await supabase
       .from('products')
-      .select('id, name, name_ta, price, offer_price, stock_quantity, unit, unit_type, category, image_url, barcode, sku, is_active, updated_at')
+      .select('id, name, name_ta, price, offer_price, purchase_price, cost_price, stock_quantity, unit, unit_type, category, image_url, barcode, sku, is_active, updated_at')
       .order('name', { ascending: true })
 
     if (prodErr) {
@@ -139,6 +141,8 @@ export const inventoryService = {
             stock: Number(v.stock) || 0,
             price: Number(v.price) || Number(p.price) || 0,
             offer_price: p.offer_price ? Number(p.offer_price) : undefined,
+            purchase_price: v.purchase_price ? Number(v.purchase_price) : (p.purchase_price ? Number(p.purchase_price) : undefined),
+            cost_price: v.purchase_price ? Number(v.purchase_price) : (p.cost_price ? Number(p.cost_price) : undefined),
             unit: p.unit,
             unit_type: p.unit_type,
             category: p.category,
@@ -162,6 +166,8 @@ export const inventoryService = {
           stock: Number(p.stock_quantity) || 0,
           price: Number(p.price) || 0,
           offer_price: p.offer_price ? Number(p.offer_price) : undefined,
+          purchase_price: p.purchase_price ? Number(p.purchase_price) : (p.cost_price ? Number(p.cost_price) : undefined),
+          cost_price: p.cost_price ? Number(p.cost_price) : (p.purchase_price ? Number(p.purchase_price) : undefined),
           unit: p.unit,
           unit_type: p.unit_type,
           category: p.category,

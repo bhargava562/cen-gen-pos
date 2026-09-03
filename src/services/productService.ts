@@ -26,6 +26,44 @@ export function fetchAllProducts() {
     .order('sort_order', { ascending: true })
 }
 
+export async function updateItemPrice(params: {
+  entityType: 'product' | 'variant'
+  id: number | string
+  newPrice: number
+  newCostPrice?: number
+}): Promise<void> {
+  if (params.newPrice < 0) throw new Error('Price cannot be negative')
+
+  if (params.entityType === 'variant') {
+    const updatePayload: Record<string, unknown> = {
+      price: params.newPrice,
+      updated_at: new Date().toISOString(),
+    }
+    if (params.newCostPrice !== undefined && params.newCostPrice >= 0) {
+      updatePayload.purchase_price = params.newCostPrice
+    }
+    const { error } = await supabase
+      .from('product_variants')
+      .update(updatePayload)
+      .eq('id', params.id)
+    if (error) throw error
+  } else {
+    const updatePayload: Record<string, unknown> = {
+      price: params.newPrice,
+      updated_at: new Date().toISOString(),
+    }
+    if (params.newCostPrice !== undefined && params.newCostPrice >= 0) {
+      updatePayload.cost_price = params.newCostPrice
+      updatePayload.purchase_price = params.newCostPrice
+    }
+    const { error } = await supabase
+      .from('products')
+      .update(updatePayload)
+      .eq('id', params.id)
+    if (error) throw error
+  }
+}
+
 export async function getOrCreateUnregisteredProduct(
   name: string,
   price: number

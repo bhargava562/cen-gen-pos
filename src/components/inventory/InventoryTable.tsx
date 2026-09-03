@@ -12,12 +12,14 @@ import {
   Tag,
   PackagePlus,
   Box,
+  Edit2,
 } from 'lucide-react'
 import { inventoryService, type InventoryStockItem } from '../../services/inventoryService'
 import { CreateBarcodeModal } from '../barcode/CreateBarcodeModal'
 import { BarcodePrintModal } from '../barcode/BarcodePrintModal'
 import { AdjustStockModal } from './AdjustStockModal'
 import { StockHistoryDrawer } from './StockHistoryDrawer'
+import { QuickPriceModal } from './QuickPriceModal'
 import { formatCurrency } from '../../lib/retail'
 import { useProductStore, useAdminAuthStore } from '../../store/store'
 import { CategoryManagerView } from './CategoryManagerView'
@@ -42,6 +44,7 @@ export const InventoryTable: React.FC = () => {
   const [printModalItem, setPrintModalItem] = useState<InventoryStockItem | null>(null)
   const [adjustModalItem, setAdjustModalItem] = useState<InventoryStockItem | null>(null)
   const [historyDrawerItem, setHistoryDrawerItem] = useState<InventoryStockItem | null>(null)
+  const [priceModalItem, setPriceModalItem] = useState<InventoryStockItem | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -412,7 +415,19 @@ export const InventoryTable: React.FC = () => {
 
                         {/* Price */}
                         <td className="p-3.5 text-right font-black text-xs text-gray-900">
-                          {formatCurrency(item.price)}
+                          <div className="inline-flex items-center justify-end gap-1.5 group">
+                            <span>{formatCurrency(item.price)}</span>
+                            {role === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => setPriceModalItem(item)}
+                                className="p-1 rounded-md text-gray-400 hover:text-amber-800 hover:bg-amber-100/70 transition-all cursor-pointer"
+                                title="Quick Edit Price"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         {/* Actions */}
@@ -527,6 +542,29 @@ export const InventoryTable: React.FC = () => {
           isOpen={!!historyDrawerItem}
           onClose={() => setHistoryDrawerItem(null)}
           item={historyDrawerItem}
+        />
+      )}
+
+      {/* Modal: Quick Edit Price */}
+      {priceModalItem && (
+        <QuickPriceModal
+          isOpen={!!priceModalItem}
+          item={priceModalItem}
+          onClose={() => setPriceModalItem(null)}
+          onSuccess={(updated) => {
+            setItems((prev) =>
+              prev.map((it) =>
+                it.id === updated.id
+                  ? {
+                      ...it,
+                      price: updated.price,
+                      purchase_price: updated.cost_price ?? it.purchase_price,
+                    }
+                  : it
+              )
+            )
+            void fetchProducts()
+          }}
         />
       )}
     </div>

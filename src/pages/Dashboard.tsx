@@ -52,6 +52,8 @@ import AdvanceOrders from './AdvanceOrders'
 import type { AdvanceOrder } from '../services/advanceOrderService'
 import { InventoryTable } from '../components/inventory/InventoryTable'
 import { ExpensesView } from '../components/expenses/ExpensesView'
+import { LowStockAlarmModal } from '../components/dashboard/LowStockAlarmModal'
+import { useLowStockMonitor } from '../hooks/useLowStockMonitor'
 import { BRAND_EN, BRAND_LOGO } from '../lib/brand'
 import {
   ResponsiveContainer,
@@ -160,6 +162,7 @@ const DEFAULT_OPTIONS_FOR_TYPE: Record<UnitType, string> = {
 }
 
 export default function Dashboard() {
+  useLowStockMonitor()
   const { user } = useAuthStore()
   const { products, fetchProducts } = useProductStore()
   const location = useLocation()
@@ -4009,6 +4012,9 @@ export default function Dashboard() {
           </div>
         )
       })()}
+
+      {/* Floating Low Stock Sound & Visual Alarm Modal */}
+      <LowStockAlarmModal />
 
     </div>
   )

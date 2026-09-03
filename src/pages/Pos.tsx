@@ -31,6 +31,8 @@ import { fetchVariantsByProduct, type ProductVariant } from '../services/variant
 import { BarcodeScannerInput, type ScannedItemPayload } from '../components/pos/BarcodeScannerInput'
 import { AddUnregisteredItemModal } from '../components/pos/AddUnregisteredItemModal'
 import { getOrCreateUnregisteredProduct } from '../services/productService'
+import { LowStockAlarmModal } from '../components/dashboard/LowStockAlarmModal'
+import { useLowStockMonitor } from '../hooks/useLowStockMonitor'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PosItem = Product & {
@@ -121,13 +123,17 @@ type PosProps = {
 }
 
 export default function Pos(props: PosProps = {}) {
+  const embeddedMode = Boolean(props.isEmbedded)
+  if (!embeddedMode) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useLowStockMonitor()
+  }
   const { products, fetchProducts } = useProductStore()
   const { getVariants, fetchVariants } = useVariantStore()
   const { lang } = useLangStore()
   const l = (en: string, ta: string) => lang === 'ta' ? ta : en
   const navigate = useNavigate()
   const { logout, role } = useAdminAuthStore()
-  const embeddedMode = Boolean(props.isEmbedded)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [billingAdjOpen, setBillingAdjOpen] = useState(false)
 
@@ -1655,6 +1661,9 @@ export default function Pos(props: PosProps = {}) {
           </div>
         </div>
       )}
+
+      {/* Floating Low Stock Sound & Visual Alarm Modal (Standalone POS) */}
+      {!embeddedMode && <LowStockAlarmModal />}
     </div>
   )
 }
