@@ -25,3 +25,91 @@ export function fetchAllProducts() {
     .select(PRODUCT_COLUMNS)
     .order('sort_order', { ascending: true })
 }
+
+export async function getOrCreateUnregisteredProduct(
+  name: string,
+  price: number
+): Promise<{ id: number; name: string; price: number; category: string }> {
+  const trimmedName = name.trim()
+
+  // 1. Resolve or create 'Unregistered' category
+  let { data: cat } = await supabase
+    .from('categories')
+    .select('id, name_en')
+    .ilike('name_en', 'Unregistered')
+    .maybeSingle()
+
+  if (!cat) {
+    const { data: newCat, error: catErr } = await supabase
+      .from('categories')
+      .insert({
+        name_en: 'Unregistered',
+        name_ta: 'பதிவுசெய்யப்படாதது',
+        is_active: true,
+        sort_order: 999,
+      })
+      .select('id, name_en')
+      .single()
+
+    if (catErr) throw catErr
+    cat = newCat
+  }
+
+  const categoryId = Number(cat.id)
+
+  // 2. Check if product already exists under Unregistered category
+  const { data: existingProd } = await supabase
+    .from('products')
+    .select('id, name, price, category')
+    .ilike('name', trimmedName)
+    .eq('category_id', categoryId)
+    .maybeSingle()
+
+  if (existingProd) {
+    // Update price if changed so Catalog displays the latest rate
+    if (Number(existingProd.price) !== Number(price)) {
+      await supabase
+        .from('products')
+        .update({ price: Number(price), updated_at: new Date().toISOString() })
+        .eq('id', existingProd.id)
+    }
+    return {
+      id: Number(existingProd.id),
+      name: existingProd.name,
+      price: Number(price),
+      category: 'Unregistered',
+    }
+  }
+
+  // 3. Create ad-hoc product row (stock 0, non-inventory)
+  const { data: newProd, error: prodErr } = await supabase
+    .from('products')
+    .insert({
+      name: trimmedName,
+      category: 'Unregistered',
+      category_id: categoryId,
+      price: Number(price),
+      offer_price: null,
+      stock_quantity: 0,
+      stock: 0,
+      unit_type: 'unit',
+      unit_label: 'piece',
+      unit: 'piece',
+      base_quantity: 1,
+      has_variants: false,
+      is_active: true,
+      sort_order: 999,
+    })
+    .select('id, name, price, category')
+    .single()
+
+  if (prodErr) throw prodErr
+
+  return {
+    id: Number(newProd.id),
+    name: newProd.name,
+    price: Number(newProd.price),
+    category: 'Unregistered',
+  }
+}
+

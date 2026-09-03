@@ -101,36 +101,40 @@ export const InventoryTable: React.FC = () => {
   // Combined product options for Barcode Generator intake
   const distinctProducts: ProductOptionType[] = Array.from(
     new Map<number, ProductOptionType>([
-      ...storeProducts.map(
-        (p): [number, ProductOptionType] => [
-          Number(p.id),
-          {
-            id: Number(p.id),
-            name: p.name,
-            price: p.price,
-            cost_price: p.purchasePrice || 0,
-            barcode: p.barcode,
-            stock_quantity: p.stockQuantity ?? p.stock ?? 0,
-            category: p.category,
-            has_variants: p.hasVariants,
-          },
-        ]
-      ),
-      ...items.map(
-        (i): [number, ProductOptionType] => [
-          i.product_id,
-          {
-            id: i.product_id,
-            name: i.name,
-            price: i.price,
-            cost_price: 0,
-            barcode: i.barcode || undefined,
-            stock_quantity: i.stock,
-            category: i.category || undefined,
-            has_variants: !!i.variant_id,
-          },
-        ]
-      ),
+      ...storeProducts
+        .filter((p) => p.category?.trim().toLowerCase() !== 'unregistered')
+        .map(
+          (p): [number, ProductOptionType] => [
+            Number(p.id),
+            {
+              id: Number(p.id),
+              name: p.name,
+              price: p.price,
+              cost_price: p.purchasePrice || 0,
+              barcode: p.barcode,
+              stock_quantity: p.stockQuantity ?? p.stock ?? 0,
+              category: p.category,
+              has_variants: p.hasVariants,
+            },
+          ]
+        ),
+      ...items
+        .filter((i) => i.category?.trim().toLowerCase() !== 'unregistered')
+        .map(
+          (i): [number, ProductOptionType] => [
+            i.product_id,
+            {
+              id: i.product_id,
+              name: i.name,
+              price: i.price,
+              cost_price: 0,
+              barcode: i.barcode || undefined,
+              stock_quantity: i.stock,
+              category: i.category || undefined,
+              has_variants: !!i.variant_id,
+            },
+          ]
+        ),
     ]).values()
   )
 

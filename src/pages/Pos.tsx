@@ -29,6 +29,8 @@ import { normalizePhone, toWhatsAppUrl } from '../lib/phone'
 import { useLangStore } from '../store/langStore'
 import { fetchVariantsByProduct, type ProductVariant } from '../services/variantService'
 import { BarcodeScannerInput, type ScannedItemPayload } from '../components/pos/BarcodeScannerInput'
+import { AddUnregisteredItemModal } from '../components/pos/AddUnregisteredItemModal'
+import { getOrCreateUnregisteredProduct } from '../services/productService'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PosItem = Product & {
@@ -86,7 +88,17 @@ const makePosItem = (p: Product, qty?: number): PosItem => {
   const basePrice = p.offerPrice || p.price
   const q = Math.max(1, Math.round(qty ?? 1))
   const packLabel = p.predefinedOptions[0]?.label ?? p.unitLabel
-  return { ...p, qty: q, selectedUnit: packLabel, basePrice, lineTotal: calculateLineTotal(q, p.unitType, p.baseQuantity, basePrice) }
+  const isUnregistered = p.category === 'Unregistered'
+  return {
+    ...p,
+    qty: q,
+    selectedUnit: packLabel,
+    basePrice,
+    lineTotal: calculateLineTotal(q, p.unitType, p.baseQuantity, basePrice),
+    source: isUnregistered ? 'manual' : (p.barcode ? 'catalogue' : 'catalogue'),
+    stock: isUnregistered ? 999999 : p.stock,
+    stockQuantity: isUnregistered ? 999999 : p.stockQuantity,
+  }
 }
 
 const recalc = (item: PosItem, nextQty: number): PosItem => {
@@ -151,6 +163,7 @@ export default function Pos(props: PosProps = {}) {
   const [gstInput, setGstInput] = useState('')
   const [gstType, setGstType] = useState<'percent' | 'flat'>('percent')
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const [addUnregisteredOpen, setAddUnregisteredOpen] = useState(false)
   const [depositOpen, setDepositOpen] = useState(false)
   const [depositCreated, setDepositCreated] = useState<AdvanceOrder | null>(null)
   const [depositForm, setDepositForm] = useState({ amount: '', expectedDeliveryDate: '', paymentMethod: 'cash' as AdvancePaymentMethod, address: '', remarks: '', referenceNumber: '' })
@@ -386,6 +399,72 @@ export default function Pos(props: PosProps = {}) {
 
 
 
+  const handleAddUnregisteredItem = async (input: {
+    name: string
+    price: number
+    quantity: number
+    note?: string
+  }) => {
+    try {
+      const product = await getOrCreateUnregisteredProduct(input.name, input.price)
+      const newItem: PosItem = {
+        id: product.id,
+        name: input.name,
+        nameTa: undefined,
+        tamilName: undefined,
+        category: 'Unregistered',
+        categoryId: '4',
+        remedy: [],
+        price: input.price,
+        offerPrice: null,
+        stock: 999999,
+        stockQuantity: 999999,
+        hasVariants: false,
+        unitType: 'unit',
+        unitLabel: 'piece',
+        baseQuantity: 1,
+        stockUnit: 'piece',
+        allowDecimalQuantity: false,
+        predefinedOptions: [],
+        isActive: true,
+        sortOrder: 999,
+        unit: 'piece',
+        rating: 5,
+        description: '',
+        benefits: '',
+        image: '/product-placeholder.svg',
+        imageUrl: '/product-placeholder.svg',
+        qty: input.quantity,
+        selectedUnit: 'piece',
+        basePrice: input.price,
+        lineTotal: calculateLineTotal(input.quantity, 'unit', 1, input.price),
+        source: 'manual',
+        note: input.note || null,
+      }
+
+      setItems((cur) => {
+        const ex = cur.find((i) => i.id === product.id && (i.source === 'manual' || i.category === 'Unregistered'))
+        if (!ex) return [newItem, ...cur]
+        return cur.map((i) => {
+          if (i.id === product.id && (i.source === 'manual' || i.category === 'Unregistered')) {
+            const updatedQty = i.qty + input.quantity
+            return {
+              ...i,
+              qty: updatedQty,
+              basePrice: input.price,
+              lineTotal: calculateLineTotal(updatedQty, 'unit', 1, input.price),
+              note: input.note || i.note,
+            }
+          }
+          return i
+        })
+      })
+    } catch (err: unknown) {
+      console.error('Failed to add unregistered item:', err)
+      throw err
+    }
+  }
+
   const removeItem = (id: string | number) => setItems(cur => cur.filter(i => i.id !== id))
 
   const updateItem = (id: string | number, field: 'name' | 'basePrice' | 'qty', value: string | number) => {
@@ -582,6 +661,8 @@ export default function Pos(props: PosProps = {}) {
           basePrice: Number(item.basePrice) || 0,
           imageUrl: item.imageUrl || item.image || null,
           source: item.source || 'catalogue',
+          isManual: item.source === 'manual' || item.category === 'Unregistered',
+          category: item.category || null,
           note: item.note || null,
         })),
         shipping: Number(shipping || 0),
@@ -977,21 +1058,36 @@ export default function Pos(props: PosProps = {}) {
                 <BarcodeScannerInput onItemScanned={handleScannedItem} />
               </div>
 
-              <div className="flex items-center gap-2.5 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {/* Clear Order Button */}
                 <button
                   type="button"
                   onClick={clearAll}
                   disabled={items.length === 0}
-                  className="h-10 px-4 rounded-xl border border-gray-300 text-xs font-black text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 text-[11px] font-bold rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors shrink-0 cursor-pointer"
                 >
-                  <Trash2 size={13} /> CLEAR ORDER
+                  <Trash2 className="w-3.5 h-3.5 text-gray-500" />
+                  <span>CLEAR ORDER</span>
                 </button>
+
+                {/* Button 1: Search Catalog */}
                 <button
                   type="button"
                   onClick={() => setCatalogOpen(true)}
-                  className="flex-1 h-10 px-4 rounded-xl bg-[#0A0A0A] text-[#D4AF37] border border-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-[#0A0A0A] text-[#D4AF37] hover:bg-[#1A1A1A] border border-[#D4AF37] shadow-xs transition-all shrink-0 cursor-pointer"
                 >
-                  <Search size={14} /> SEARCH CATALOG &amp; ADD ITEMS
+                  <Search className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span className="tracking-wide uppercase">SEARCH CATALOG</span>
+                </button>
+
+                {/* Button 2: Add Item (Ad-Hoc Unregistered) */}
+                <button
+                  type="button"
+                  onClick={() => setAddUnregisteredOpen(true)}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-xs transition-all shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="tracking-wide uppercase">ADD ITEM</span>
                 </button>
               </div>
             </div>
@@ -1459,6 +1555,14 @@ export default function Pos(props: PosProps = {}) {
             void addItem(p)
             setCatalogOpen(false)
           }}
+        />
+      )}
+
+      {addUnregisteredOpen && (
+        <AddUnregisteredItemModal
+          isOpen={addUnregisteredOpen}
+          onClose={() => setAddUnregisteredOpen(false)}
+          onSubmit={handleAddUnregisteredItem}
         />
       )}
 

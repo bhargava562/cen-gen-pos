@@ -116,6 +116,11 @@ export const inventoryService = {
     }
 
     for (const p of products || []) {
+      // Exclude ad-hoc non-inventory unregistered items
+      if (p.category && p.category.trim().toLowerCase() === 'unregistered') {
+        continue
+      }
+
       const prodVariants = variantsByProduct.get(p.id)
 
       if (prodVariants && prodVariants.length > 0) {

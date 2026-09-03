@@ -7,7 +7,7 @@ export type QuantityOption = {
 }
 
 export type StructuredOrderItem = {
-  product_id:   string | null   // products.id (UUID)
+  product_id:   string | null   // products.id (UUID or numeric string)
   variant_id:   string | null   // product_variants.id (UUID) — null for non-variant items
   variant_name: string | null   // snapshot of variant name at order time
   name: string
@@ -20,6 +20,8 @@ export type StructuredOrderItem = {
   line_total: number
   image_url: string | null
   source?: 'catalogue' | 'manual'
+  is_manual?: boolean
+  category?: string | null
   note?: string | null
 }
 
@@ -405,6 +407,9 @@ export const buildStructuredOrderItem = (input: {
   basePrice: number
   imageUrl?: string | null
   source?: 'catalogue' | 'manual'
+  isManual?: boolean
+  is_manual?: boolean
+  category?: string | null
   note?: string | null
 }): StructuredOrderItem => {
   const safeQuantity = normalizeSelectedQuantity(
@@ -416,6 +421,7 @@ export const buildStructuredOrderItem = (input: {
 
   const safeBaseQuantity = normalizeBaseQuantity(input.baseQuantity, input.unitType)
   const safeBasePrice = clampTo(toNumber(input.basePrice, 0), 0)
+  const isManual = Boolean(input.isManual || input.is_manual || input.source === 'manual' || input.category === 'Unregistered')
 
   return {
     product_id:   input.productId,
@@ -430,7 +436,9 @@ export const buildStructuredOrderItem = (input: {
     base_price: safeBasePrice,
     line_total: calculateLineTotal(safeQuantity, input.unitType, safeBaseQuantity, safeBasePrice),
     image_url: input.imageUrl ? String(input.imageUrl) : null,
-    source: input.source || 'catalogue',
+    source: isManual ? 'manual' : (input.source || 'catalogue'),
+    is_manual: isManual,
+    category: input.category || null,
     note: input.note ? String(input.note) : null,
   }
 }

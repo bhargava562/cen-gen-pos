@@ -45,8 +45,17 @@ export default function CatalogModal({ isOpen, onClose, onAdd }: CatalogModalPro
       .filter(c => c.is_active !== false)
       .map(c => c.name_en.trim())
       .filter(Boolean)
+
+    // Ensure any category attached to active products (such as Unregistered) is available
+    products.forEach(p => {
+      const catName = (p.category || '').trim()
+      if (p.isActive && catName && !activeCats.includes(catName)) {
+        activeCats.push(catName)
+      }
+    })
+
     return ['All', ...activeCats]
-  }, [categoryOptions])
+  }, [categoryOptions, products])
 
   const allCategoryOptions = useMemo(() => {
     const merged = new Map<string, CategoryOption>()
