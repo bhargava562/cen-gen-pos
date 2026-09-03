@@ -32,7 +32,7 @@ export default function AdminLogin() {
     } else if (role === 'staff') {
       navigate('/dashboard', { replace: true })
     } else {
-      setError(l('Invalid portal ID or password', 'தவறான பயனர் ID அல்லது கடவுச்சொல்'))
+      setError(l('Invalid Admin or Staff credentials', 'தவறான நிர்வாகி அல்லது பணியாளர் விவரங்கள்'))
     }
   }
 

@@ -37,6 +37,18 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminOnlyGuard({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn, role } = useAdminAuthStore()
+  const location = useLocation()
+  if (!isLoggedIn) {
+    return <Navigate to="/admin-login" state={{ from: location }} replace />
+  }
+  if (role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+  return <>{children}</>
+}
+
 function PosGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAdminAuthStore()
   const location = useLocation()
@@ -117,6 +129,7 @@ function AppShell() {
               </Suspense>
             }
           />
+          {/* Common Admin & Staff Portal Routes */}
           <Route
             element={
               <AdminGuard>
@@ -128,9 +141,21 @@ function AppShell() {
           >
             <Route path="/admin" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/advance-orders" element={<Dashboard />} />
+          </Route>
+
+          {/* Admin-Only Dedicated Routes */}
+          <Route
+            element={
+              <AdminOnlyGuard>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Dashboard />
+                </Suspense>
+              </AdminOnlyGuard>
+            }
+          >
             <Route path="/whatsapp-center" element={<Dashboard />} />
             <Route path="/pos-analytics" element={<Dashboard />} />
-            <Route path="/advance-orders" element={<Dashboard />} />
             <Route path="/expenses" element={<Dashboard />} />
             <Route path="/dashboard/expenses" element={<Dashboard />} />
           </Route>

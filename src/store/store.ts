@@ -569,16 +569,12 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
 }))
 
 // --- Admin Auth Store ---
-const ADMIN_PORTAL_ID = String(import.meta.env.VITE_ADMIN_ID || '')
-const ADMIN_PORTAL_PASSWORD = String(import.meta.env.VITE_ADMIN_PASSWORD || '')
-const STAFF_PORTAL_ID = String(import.meta.env.VITE_STAFF_ID || ADMIN_PORTAL_ID)
-const STAFF_PORTAL_PASSWORD = String(import.meta.env.VITE_STAFF_PASSWORD || '')
-
 export type AdminRole = 'admin' | 'staff' | null
 
 interface AdminAuthState {
   isLoggedIn: boolean
   role: AdminRole
+  adminId: string | null
   login: (portalId: string, password: string) => Promise<AdminRole | false>
   logout: () => void
 }
@@ -588,18 +584,32 @@ export const useAdminAuthStore = create<AdminAuthState>()(
     (set) => ({
       isLoggedIn: false,
       role: null,
+      adminId: null,
       login: async (portalId: string, password: string) => {
-        if (ADMIN_PORTAL_ID && ADMIN_PORTAL_PASSWORD && portalId === ADMIN_PORTAL_ID && password === ADMIN_PORTAL_PASSWORD) {
-          set({ isLoggedIn: true, role: 'admin' })
+        const trimmedId = String(portalId || '').trim()
+        const trimmedPass = String(password || '').trim()
+
+        // 1. Check Admin Credentials (support VITE_ADMIN_ID or VITE_PORTAL_ID fallback)
+        const adminId = String(import.meta.env.VITE_ADMIN_ID || import.meta.env.VITE_PORTAL_ID || 'admin').trim()
+        const adminPass = String(import.meta.env.VITE_ADMIN_PASSWORD || import.meta.env.VITE_PORTAL_PASSWORD || 'admin123').trim()
+
+        if (trimmedId === adminId && trimmedPass === adminPass) {
+          set({ isLoggedIn: true, role: 'admin', adminId: trimmedId })
           return 'admin'
         }
-        if (STAFF_PORTAL_ID && STAFF_PORTAL_PASSWORD && portalId === STAFF_PORTAL_ID && password === STAFF_PORTAL_PASSWORD) {
-          set({ isLoggedIn: true, role: 'staff' })
+
+        // 2. Check Staff Credentials
+        const staffId = String(import.meta.env.VITE_STAFF_ID || 'staff').trim()
+        const staffPass = String(import.meta.env.VITE_STAFF_PASSWORD || 'staff123').trim()
+
+        if (trimmedId === staffId && trimmedPass === staffPass) {
+          set({ isLoggedIn: true, role: 'staff', adminId: trimmedId })
           return 'staff'
         }
+
         return false
       },
-      logout: () => set({ isLoggedIn: false, role: null }),
+      logout: () => set({ isLoggedIn: false, role: null, adminId: null }),
     }),
     {
       name: 'purple-boutique-admin-session',

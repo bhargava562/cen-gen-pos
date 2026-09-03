@@ -19,7 +19,7 @@ import { BarcodePrintModal } from '../barcode/BarcodePrintModal'
 import { AdjustStockModal } from './AdjustStockModal'
 import { StockHistoryDrawer } from './StockHistoryDrawer'
 import { formatCurrency } from '../../lib/retail'
-import { useProductStore } from '../../store/store'
+import { useProductStore, useAdminAuthStore } from '../../store/store'
 import { CategoryManagerView } from './CategoryManagerView'
 import { InventoryAnalyticsView } from './InventoryAnalyticsView'
 import { AddEditProductView } from './AddEditProductView'
@@ -27,6 +27,7 @@ import { AddEditProductView } from './AddEditProductView'
 type InventoryTab = 'stock' | 'products' | 'categories' | 'analytics'
 
 export const InventoryTable: React.FC = () => {
+  const role = useAdminAuthStore((state) => state.role)
   const [activeTab, setActiveTab] = useState<InventoryTab>('stock')
   const { products: storeProducts, fetchProducts } = useProductStore()
   const [items, setItems] = useState<InventoryStockItem[]>([])
@@ -135,70 +136,84 @@ export const InventoryTable: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 4-TAB UNIFIED NAVIGATION BAR */}
-      <div className="bg-white border border-[#E8D399] rounded-2xl p-2 sm:p-2.5 shadow-sm flex items-center justify-between gap-3 overflow-x-auto hide-scrollbar">
-        <div className="flex items-center gap-1.5 p-1 bg-[#FBFAF6] border border-gray-200 rounded-xl shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('stock')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              activeTab === 'stock'
-                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100'
-            }`}
-          >
-            <Box size={14} /> Stock Management
-          </button>
+      {/* NAVIGATION / HEADER */}
+      {role === 'admin' ? (
+        <div className="bg-white border border-[#E8D399] rounded-2xl p-2 sm:p-2.5 shadow-sm flex items-center justify-between gap-3 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-1.5 p-1 bg-[#FBFAF6] border border-gray-200 rounded-xl shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('stock')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'stock'
+                  ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              <Box size={14} /> Stock Management
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('products')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              activeTab === 'products'
-                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100'
-            }`}
-          >
-            <Package size={14} /> Add / Edit Products
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('products')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'products'
+                  ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              <Package size={14} /> Add / Edit Products
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('categories')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              activeTab === 'categories'
-                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100'
-            }`}
-          >
-            <Tag size={14} /> Categories
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('categories')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'categories'
+                  ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              <Tag size={14} /> Categories
+            </button>
 
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'analytics'
+                  ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              }`}
+            >
+              <BarChart3 size={14} /> Analytics &amp; Reports
+            </button>
+          </div>
+
+          {/* Global Receive Stock CTA */}
           <button
             type="button"
-            onClick={() => setActiveTab('analytics')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              activeTab === 'analytics'
-                ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100'
-            }`}
+            onClick={() => {
+              setSelectedForReceive(null)
+              setShowReceiveModal(true)
+            }}
+            className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
           >
-            <BarChart3 size={14} /> Analytics &amp; Reports
+            <PackagePlus size={15} /> Receive Stock
           </button>
         </div>
-
-        {/* Global Receive Stock CTA */}
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedForReceive(null)
-            setShowReceiveModal(true)
-          }}
-          className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
-        >
-          <PackagePlus size={15} /> Receive Stock
-        </button>
-      </div>
+      ) : (
+        <div className="bg-white border border-[#E8D399] rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#0A0A0A] text-[#D4AF37] flex items-center justify-center font-black">
+              <Box size={18} />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-[#0A0A0A]">Stock Management</h2>
+              <p className="text-xs font-semibold text-gray-500">Live store product inventory and stock levels</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: STOCK MANAGEMENT VIEW */}
       {activeTab === 'stock' && (
@@ -399,16 +414,18 @@ export const InventoryTable: React.FC = () => {
                         {/* Actions */}
                         <td className="p-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Adjust Stock */}
-                            <button
-                              type="button"
-                              onClick={() => setAdjustModalItem(item)}
-                              className="px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-[11px] font-bold transition-colors cursor-pointer"
-                              title="Adjust Stock"
-                            >
-                              <SlidersHorizontal size={13} className="inline mr-1" />
-                              Adjust
-                            </button>
+                            {/* Adjust Stock (Admin Only) */}
+                            {role === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => setAdjustModalItem(item)}
+                                className="px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-[11px] font-bold transition-colors cursor-pointer"
+                                title="Adjust Stock"
+                              >
+                                <SlidersHorizontal size={13} className="inline mr-1" />
+                                Adjust
+                              </button>
+                            )}
 
                             {/* Stock History */}
                             <button

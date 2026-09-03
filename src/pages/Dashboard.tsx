@@ -257,7 +257,21 @@ export default function Dashboard() {
     err instanceof Error ? err.message
     : (err && typeof err === 'object' && 'message' in err) ? String((err as {message?:unknown}).message) || fb : fb
 
+  useEffect(() => {
+    if (role === 'staff') {
+      const staffAllowedTabs: TabKey[] = ['billing', 'inventory', 'advance_orders', 'history']
+      if (!staffAllowedTabs.includes(tab)) {
+        setTab('billing')
+        navigate('/dashboard', { replace: true })
+      }
+    }
+  }, [role, tab, navigate])
+
   const handleTabClick = (tabKey: TabKey) => {
+    if (role === 'staff') {
+      const staffAllowedTabs: TabKey[] = ['billing', 'inventory', 'advance_orders', 'history']
+      if (!staffAllowedTabs.includes(tabKey)) return
+    }
     setTab(tabKey)
     if (tabKey === 'pos_analytics') {
       navigate('/dashboard?tab=pos_analytics', { replace: true })
@@ -1452,17 +1466,23 @@ export default function Dashboard() {
     </div>
   )
 
-  const allNavItems: Array<{ id: TabKey; icon: React.ReactNode; label: string }> = [
-    { id: 'billing',       icon: <ShoppingCart size={18} />,     label: 'Billing Panel' },
-    { id: 'inventory',     icon: <Layers size={18} />,           label: 'Inventory & Barcodes' },
-    { id: 'advance_orders',icon: <FileText size={18} />,         label: 'Advance Orders' },
-    { id: 'expenses',      icon: <Receipt size={18} />,          label: 'Expenses' },
-    { id: 'categories',    icon: <Package size={18} />,           label: 'Categories' },
-    { id: 'history',       icon: <List size={18} />,             label: 'Order History' },
-    { id: 'pos_analytics', icon: <BarChart2 size={18} />,        label: 'Analytics Dashboard' },
-    { id: 'coupons',       icon: <Box size={18} />,              label: 'Coupons' },
-  ]
-  const navItems = allNavItems.filter(item => role === 'admin' || (item.id !== 'pos_analytics' && item.id !== 'coupons'))
+  const navItems: Array<{ id: TabKey; icon: React.ReactNode; label: string }> = role === 'staff'
+    ? [
+        { id: 'billing',        icon: <ShoppingCart size={18} />, label: 'Billing Panel' },
+        { id: 'inventory',      icon: <Layers size={18} />,       label: 'Inventory' },
+        { id: 'advance_orders', icon: <FileText size={18} />,     label: 'Advance Orders' },
+        { id: 'history',        icon: <List size={18} />,         label: 'Order History' },
+      ]
+    : [
+        { id: 'billing',        icon: <ShoppingCart size={18} />, label: 'Billing Panel' },
+        { id: 'inventory',      icon: <Layers size={18} />,       label: 'Inventory & Barcodes' },
+        { id: 'advance_orders', icon: <FileText size={18} />,     label: 'Advance Orders' },
+        { id: 'expenses',       icon: <Receipt size={18} />,      label: 'Expenses' },
+        { id: 'categories',     icon: <Package size={18} />,      label: 'Categories' },
+        { id: 'history',        icon: <List size={18} />,         label: 'Order History' },
+        { id: 'pos_analytics',  icon: <BarChart2 size={18} />,    label: 'Analytics Dashboard' },
+        { id: 'coupons',        icon: <Box size={18} />,          label: 'Coupons' },
+      ]
 
   return (
     <div className="admin-shell h-screen max-h-screen min-h-screen bg-bgMain flex flex-col lg:flex-row overflow-hidden">
@@ -1481,7 +1501,12 @@ export default function Dashboard() {
               <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="w-full h-full object-contain" />
             </div>
             {!sidebarCollapsed && (
-              <h1 className="text-[17px] font-black text-white truncate tracking-wider">{BRAND_EN}</h1>
+              <div className="flex flex-col min-w-0">
+                <h1 className="text-[15px] font-black text-white truncate tracking-wider">{BRAND_EN}</h1>
+                <span className={`text-[8.5px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded w-fit ${role === 'admin' ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}>
+                  {role === 'admin' ? 'ADMIN' : 'STAFF'}
+                </span>
+              </div>
             )}
           </Link>
           <button
@@ -1500,7 +1525,12 @@ export default function Dashboard() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#141414] border border-[#D4AF37]/50 shrink-0 overflow-hidden shadow-sm p-0.5 hover:scale-105 transition-transform">
               <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="w-full h-full object-contain" />
             </div>
-            <span className="text-[16px] font-black text-white tracking-wider truncate">{BRAND_EN}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[16px] font-black text-white tracking-wider truncate">{BRAND_EN}</span>
+              <span className={`text-[8.5px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${role === 'admin' ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}>
+                {role === 'admin' ? 'ADMIN' : 'STAFF'}
+              </span>
+            </div>
           </Link>
           <button
             onClick={() => {
@@ -2882,11 +2912,17 @@ export default function Dashboard() {
                           </button>
                         </div>
                         <div className="flex gap-2 w-full sm:flex-1">
-                        <select value={normalizeStatus(o.status)} onChange={e => void updateOrderStatus(o.id, e.target.value)}
-                          className={`min-h-[44px] flex-1 cursor-pointer rounded-xl border px-3 py-2 text-[12px] font-black outline-none ${normalizeStatus(o.status) === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-                          <option value="pending">{l('Pending', 'நிலுவை')}</option>
-                          <option value="completed">{l('Completed', 'முடிந்தது')}</option>
-                        </select>
+                        {role === 'admin' ? (
+                          <select value={normalizeStatus(o.status)} onChange={e => void updateOrderStatus(o.id, e.target.value)}
+                            className={`min-h-[44px] flex-1 cursor-pointer rounded-xl border px-3 py-2 text-[12px] font-black outline-none ${normalizeStatus(o.status) === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                            <option value="pending">{l('Pending', 'நிலுவை')}</option>
+                            <option value="completed">{l('Completed', 'முடிந்தது')}</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex items-center justify-center flex-1 min-h-[44px] px-3 py-2 rounded-xl text-[12px] font-black uppercase ${normalizeStatus(o.status) === 'completed' ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
+                            {normalizeStatus(o.status) === 'completed' ? l('Completed', 'முடிந்தது') : l('Pending', 'நிலுவை')}
+                          </span>
+                        )}
                         {role === 'admin' && (
                           <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl border border-[#E5E7EB]/60 text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/5" title="Delete Order">
                             <Trash2 size={14} className="mx-auto" />
@@ -2934,11 +2970,17 @@ export default function Dashboard() {
                           <td className="whitespace-nowrap px-2 py-3 text-[11px] text-[#374151]">{new Date(o.created_at).toLocaleDateString('en-IN')}</td>
                           <td className="px-2 py-3">
                             <div className="flex items-center justify-center gap-1.5">
-                              <select value={normalizeStatus(o.status)} onChange={e => void updateOrderStatus(o.id, e.target.value)}
-                                className={`cursor-pointer rounded-lg border px-1.5 py-1 text-[10px] font-black outline-none ${normalizeStatus(o.status) === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-                                <option value="pending">{l('Pending', 'நிலுவை')}</option>
-                                <option value="completed">{l('Completed', 'முடிந்தது')}</option>
-                              </select>
+                              {role === 'admin' ? (
+                                <select value={normalizeStatus(o.status)} onChange={e => void updateOrderStatus(o.id, e.target.value)}
+                                  className={`cursor-pointer rounded-lg border px-1.5 py-1 text-[10px] font-black outline-none ${normalizeStatus(o.status) === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                                  <option value="pending">{l('Pending', 'நிலுவை')}</option>
+                                  <option value="completed">{l('Completed', 'முடிந்தது')}</option>
+                                </select>
+                              ) : (
+                                <span className={`inline-flex items-center justify-center rounded-lg border px-2 py-0.5 text-[10px] font-black uppercase ${normalizeStatus(o.status) === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                                  {normalizeStatus(o.status) === 'completed' ? l('Completed', 'முடிந்தது') : l('Pending', 'நிலுவை')}
+                                </span>
+                              )}
                               {role === 'admin' && (
                                 <button onClick={() => void deleteOrder(o.id, o.invoice_no)} className="rounded-lg p-1 text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/5" title="Delete Order">
                                   <Trash2 size={13} />
