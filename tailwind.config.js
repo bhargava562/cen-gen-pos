@@ -33,9 +33,12 @@ export default {
         borderLight: '#E5E7EB', // Neutral clean border
       },
       fontFamily: {
-        sans:      ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'system-ui', '-apple-system', 'sans-serif'],
-        brand:     ['"Cinzel"', '"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'serif'],
-        headline:  ['"Cinzel"', '"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'sans-serif'],
+        sans:      ['"DM Sans"', '"Outfit"', '"Noto Sans Tamil"', 'system-ui', '-apple-system', 'sans-serif'],
+        dmsans:    ['"DM Sans"', 'sans-serif'],
+        'dm-sans': ['"DM Sans"', 'sans-serif'],
+        outfit:    ['"Outfit"', 'sans-serif'],
+        brand:     ['"Cinzel"', '"DM Sans"', '"Outfit"', '"Noto Sans Tamil"', 'serif'],
+        headline:  ['"DM Sans"', '"Outfit"', '"Noto Sans Tamil"', 'sans-serif'],
       },
       boxShadow: {
         soft:   '0 1px 3px rgba(0,0,0,0.05)',

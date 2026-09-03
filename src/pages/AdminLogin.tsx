@@ -37,51 +37,51 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0A0A0A] px-4 py-8 font-sans text-white sm:px-6 lg:flex lg:items-center lg:justify-center">
+    <div className="relative h-screen max-h-screen min-h-screen overflow-y-auto lg:overflow-hidden bg-[#0A0A0A] p-3 sm:p-5 lg:p-6 font-sans text-white flex items-center justify-center">
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#D4AF37]/15 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-[#D4AF37]/10 blur-3xl" />
-      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-[#D4AF37]/30 bg-[#141414] shadow-[0_24px_80px_rgba(0,0,0,0.6)] lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="hidden flex-col justify-between bg-[#0A0A0A] border-r border-[#D4AF37]/20 p-10 text-white lg:flex">
+      <div className="relative grid w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-[#D4AF37]/30 bg-[#141414] shadow-[0_24px_80px_rgba(0,0,0,0.6)] lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="hidden flex-col justify-between bg-[#0A0A0A] border-r border-[#D4AF37]/20 p-6 lg:p-8 text-white lg:flex overflow-y-auto hide-scrollbar">
           <div>
-            <div className="mb-8 inline-flex items-center justify-center rounded-2xl bg-[#141414] border border-[#D4AF37]/40 p-2 shadow-xl">
-              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-12 w-auto max-w-[180px] rounded-xl object-contain" />
+            <div className="mb-5 inline-flex items-center justify-center rounded-2xl bg-[#141414] border border-[#D4AF37]/40 p-1.5 shadow-xl">
+              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-10 w-auto max-w-[150px] rounded-xl object-contain" />
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#D4AF37]">{BRAND_SUBTITLE}</p>
-            <h2 className="mt-4 max-w-xs text-4xl font-black leading-tight tracking-tight text-white">Everything you need to run retail billing clearly.</h2>
-            <p className="mt-5 max-w-sm text-sm leading-7 text-white/70">Manage barcodes, SKU variants, inventory ledger, POS billing, invoices, and customer communications from one secure portal.</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#D4AF37]">{BRAND_SUBTITLE}</p>
+            <h2 className="mt-3 max-w-xs text-2xl lg:text-3xl font-black leading-tight tracking-tight text-white">Everything you need to run retail billing clearly.</h2>
+            <p className="mt-3.5 max-w-sm text-xs leading-6 text-white/70">Manage barcodes, SKU variants, inventory ledger, POS billing, invoices, and customer communications from one secure portal.</p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#D4AF37]"><ShieldCheck size={16} /> Secure retail workspace</div>
+          <div className="mt-6 flex items-center gap-2 text-xs font-bold text-[#D4AF37]"><ShieldCheck size={15} /> Secure retail workspace</div>
         </div>
-        <div className="p-6 sm:p-10 lg:p-12 bg-white text-[#111111]">
+        <div className="p-5 sm:p-7 lg:p-8 bg-white text-[#111111] overflow-y-auto hide-scrollbar flex flex-col justify-center">
           {/* Brand */}
-          <div className="mb-8 flex flex-col items-center text-center lg:items-start lg:text-left">
-            <div className="mb-5 inline-flex items-center justify-center rounded-2xl bg-[#0A0A0A] border border-[#D4AF37]/40 p-2 shadow-xl lg:hidden">
-              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-12 w-auto max-w-[160px] rounded-xl object-contain" />
+          <div className="mb-4 sm:mb-5 flex flex-col items-center text-center lg:items-start lg:text-left">
+            <div className="mb-3 inline-flex items-center justify-center rounded-2xl bg-[#0A0A0A] border border-[#D4AF37]/40 p-1.5 shadow-xl lg:hidden">
+              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-9 w-auto max-w-[140px] rounded-xl object-contain" />
             </div>
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#B48811]">{BRAND_SUBTITLE}</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#0A0A0A]">{BRAND_EN}</h1>
-            <p className="mt-1 text-sm font-semibold text-[#7A786F]">{BRAND_TA}</p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#D4AF37] bg-[#FBFAF6] px-3.5 py-1.5 text-[11px] font-black uppercase tracking-wider text-[#0A0A0A]">
-              <ShieldCheck size={13} className="text-[#B48811]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#B48811]">{BRAND_SUBTITLE}</p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-[#0A0A0A]">{BRAND_EN}</h1>
+            <p className="mt-0.5 text-xs font-semibold text-[#7A786F]">{BRAND_TA}</p>
+            <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37] bg-[#FBFAF6] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#0A0A0A]">
+              <ShieldCheck size={12} className="text-[#B48811]" />
               {l('Admin / Staff Portal', 'நிர்வாக நுழைவு')}
             </p>
           </div>
 
           {/* Server-level error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-[12px] mb-4 flex items-center gap-2">
+            <div className="bg-red-50 border border-red-200 text-red-600 px-3.5 py-2.5 rounded-xl text-[12px] mb-3.5 flex items-center gap-2">
               <AlertCircle size={14} />
               {error}
             </div>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <p className="text-[13px] font-bold text-[#111111]">{l('Enter your portal credentials', 'உங்கள் பயனர் விவரங்களை உள்ளிடவும்')}</p>
+          <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
+            <p className="text-xs font-bold text-[#111111]">{l('Enter your portal credentials', 'உங்கள் பயனர் விவரங்களை உள்ளிடவும்')}</p>
 
             <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
-                <ShieldCheck size={14} />
+              <label className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
+                <ShieldCheck size={13} />
                 Portal ID
                 <span className="font-black text-red-500">*</span>
               </label>
@@ -89,7 +89,7 @@ export default function AdminLogin() {
                 type="text"
                 autoComplete="username"
                 placeholder="Enter portal ID"
-                className="w-full rounded-2xl border-2 border-[#E8D399] bg-[#FBFAF6] px-4 py-3.5 text-sm font-semibold outline-none transition-colors placeholder:text-[#AAA69C] focus:border-[#0A0A0A] focus:bg-white text-[#111111]"
+                className="w-full rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold outline-none transition-colors placeholder:text-[#AAA69C] focus:border-[#0A0A0A] focus:bg-white text-[#111111]"
                 value={portalId}
                 onChange={(e) => { setPortalId(e.target.value); setError('') }}
                 disabled={loading}
@@ -98,8 +98,8 @@ export default function AdminLogin() {
             </div>
 
             <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[#6B7280] uppercase tracking-wide mb-1.5">
-                <Lock size={14} />
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-[#6B7280] uppercase tracking-wide mb-1">
+                <Lock size={13} />
                 {l('Portal Password', 'நுழைவு கடவுச்சொல்')}
                 <span className="text-red-500 font-black">*</span>
               </label>
@@ -108,7 +108,7 @@ export default function AdminLogin() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="Enter portal password"
-                  className="w-full rounded-2xl border-2 border-[#E8D399] bg-[#FBFAF6] px-4 py-3.5 pr-12 text-sm font-semibold outline-none transition-colors placeholder:text-[#AAA69C] focus:border-[#0A0A0A] focus:bg-white text-[#111111]"
+                  className="w-full rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] px-3.5 py-2.5 sm:py-3 pr-11 text-xs sm:text-sm font-semibold outline-none transition-colors placeholder:text-[#AAA69C] focus:border-[#0A0A0A] focus:bg-white text-[#111111]"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError('') }}
                   disabled={loading}
@@ -117,10 +117,10 @@ export default function AdminLogin() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111111] cursor-pointer"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111111] cursor-pointer"
                   aria-label={showPassword ? l('Hide password', 'கடவுச்சொல்லை மறை') : l('Show password', 'கடவுச்சொல்லை காட்டு')}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -128,22 +128,22 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0A0A0A] border border-[#D4AF37] py-3.5 font-black text-[#D4AF37] shadow-lg shadow-black/20 transition-all hover:bg-[#1A1A1A] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] py-3 font-black text-xs sm:text-sm text-[#D4AF37] shadow-lg shadow-black/20 transition-all hover:bg-[#1A1A1A] hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
+                  <span className="w-3.5 h-3.5 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
                   {l('Signing in...', 'உள்நுழைகிறது...')}
                 </>
               ) : (
                 <>
-                  <Lock size={15} />
+                  <Lock size={14} />
                   {l('Sign In to CLAD Portal', 'CLAD போர்ட்டலில் உள்நுழு')}
                 </>
               )}
             </button>
 
-            <p className="text-center text-[11px] leading-relaxed text-[#888888]">
+            <p className="text-center text-[10px] leading-relaxed text-[#888888]">
               {l('Enter your admin or staff credentials to access billing & inventory.', 'பில்லிங் மற்றும் சரக்கு இருப்பு நிர்வாகத்தை அணுக பயனர் விவரங்களை உள்ளிடவும்.')}
             </p>
           </form>
