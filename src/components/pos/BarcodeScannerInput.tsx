@@ -244,47 +244,43 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
     }
   }
 
-  // Camera scanner lifecycle
+  // Camera scanner lifecycle & decoding
   useEffect(() => {
     if (!isCameraOpen) {
       stopCamera()
       return
     }
 
+    const videoElement = videoRef.current
+    if (!videoElement) return
+
+    let isMounted = true
     const reader = new BrowserMultiFormatReader()
     readerRef.current = reader
-    let isMounted = true
 
-    // List available video devices
+    // Enumerate devices in the background for camera picker without disrupting current stream
     BrowserMultiFormatReader.listVideoInputDevices()
       .then((devices) => {
         if (!isMounted) return
         setVideoDevices(devices)
-        if (devices.length > 0) {
-          // Prefer back/environment camera on mobile
-          const backCam = devices.find((d) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'))
-          setSelectedDeviceId(backCam ? backCam.deviceId : devices[0].deviceId)
+        if (devices.length > 0 && !selectedDeviceId) {
+          const backCam = devices.find((d) =>
+            d.label.toLowerCase().includes('back') ||
+            d.label.toLowerCase().includes('rear') ||
+            d.label.toLowerCase().includes('environment')
+          )
+          // Store without immediately re-triggering if default stream is fine
+          if (backCam) {
+            setSelectedDeviceId(backCam.deviceId)
+          }
         }
       })
       .catch((err) => {
         console.warn('Could not enumerate cameras:', err)
       })
 
-    return () => {
-      isMounted = false
-      stopCamera()
-    }
-  }, [isCameraOpen, stopCamera])
-
-  // Start video stream when camera modal is active and device is selected
-  useEffect(() => {
-    const videoElement = videoRef.current
-    const readerInstance = readerRef.current
-    if (!isCameraOpen || !videoElement || !readerInstance) return
-
-    let isMounted = true
-
-    const decodePromise = readerInstance.decodeFromVideoDevice(
+    // Start decoding immediately using selected device or default environment camera
+    const decodePromise = reader.decodeFromVideoDevice(
       selectedDeviceId || undefined,
       videoElement,
       (result, _err) => {

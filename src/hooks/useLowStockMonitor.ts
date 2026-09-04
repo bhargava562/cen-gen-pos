@@ -14,7 +14,7 @@ export function useLowStockMonitor() {
       // 1. Fetch non-variant active products (exclude Unregistered)
       const { data: prods, error: prodErr } = await supabase
         .from('products')
-        .select('id, name, stock_quantity, alert_threshold, barcode, has_variants, category')
+        .select('id, name, stock_quantity, barcode, has_variants, category')
         .eq('is_active', true)
         .eq('has_variants', false)
 
@@ -39,7 +39,7 @@ export function useLowStockMonitor() {
         if (p.category && p.category.trim().toLowerCase() === 'unregistered') {
           continue
         }
-        const threshold = Number(p.alert_threshold) > 0 ? Number(p.alert_threshold) : 5
+        const threshold = 5
         const currentStock = Number(p.stock_quantity) || 0
 
         if (currentStock <= threshold) {
