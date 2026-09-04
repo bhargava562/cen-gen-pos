@@ -1,7 +1,9 @@
-export const BRAND_EN = 'CLAD'
-export const BRAND_TA = 'CLAD'
+export const BRAND_EN = 'CLAD Clothing'
+export const BRAND_TA = 'CLAD Clothing'
+export const BRAND_SHORT = 'CLAD'
 export const BRAND_SUBTITLE = 'Retail Billing & Inventory'
 export const BRAND_LOGO = '/clad-logo.jpeg'
+export const BRAND_PRODUCTION_DOMAIN = 'https://cen-gen-pos.vercel.app'
 
 // Owner / Personal contact
 export const BRAND_OWNER_NAME = 'Rubi krishna'

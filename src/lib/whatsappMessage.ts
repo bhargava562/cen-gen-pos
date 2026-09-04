@@ -1,5 +1,5 @@
 import { formatInvoiceNo } from './retail'
-import { BRAND_EN, BRAND_INSTAGRAM, BRAND_INSTAGRAM_URL, BRAND_PRIMARY_PHONE_DISPLAY } from './brand'
+import { BRAND_EN, BRAND_INSTAGRAM, BRAND_INSTAGRAM_URL, BRAND_PRIMARY_PHONE_DISPLAY, BRAND_PRODUCTION_DOMAIN } from './brand'
 
 export type WhatsAppLineItem = {
   name: string
@@ -39,10 +39,12 @@ export type AdvanceDepositWhatsAppInput = {
 
 export const publicInvoiceUrl = (invoiceNumber: string) => {
   const formatted = formatInvoiceNo(invoiceNumber)
+  const envUrl = (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '')
   const origin =
-    typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost')
+    envUrl ||
+    (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost')
       ? window.location.origin
-      : 'https://clad.vercel.app'
+      : BRAND_PRODUCTION_DOMAIN)
   return `${origin}/invoice/${encodeURIComponent(formatted)}`
 }
 

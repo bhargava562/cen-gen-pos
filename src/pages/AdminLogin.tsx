@@ -37,10 +37,8 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="relative h-screen max-h-screen min-h-screen overflow-y-auto lg:overflow-hidden bg-[#0A0A0A] p-3 sm:p-5 lg:p-6 font-sans text-white flex items-center justify-center">
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#D4AF37]/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-[#D4AF37]/10 blur-3xl" />
-      <div className="relative grid w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-[#D4AF37]/30 bg-[#141414] shadow-[0_24px_80px_rgba(0,0,0,0.6)] lg:grid-cols-[0.85fr_1.15fr]">
+    <div className="relative h-screen max-h-screen min-h-screen overflow-y-auto lg:overflow-hidden bg-white p-3 sm:p-5 lg:p-6 font-sans flex items-center justify-center">
+      <div className="relative grid w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-gray-200/90 bg-[#141414] shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25),0_12px_28px_-6px_rgba(0,0,0,0.15)] lg:grid-cols-[0.85fr_1.15fr]">
         <div className="hidden flex-col justify-between bg-[#0A0A0A] border-r border-[#D4AF37]/20 p-6 lg:p-8 text-white lg:flex overflow-y-auto hide-scrollbar">
           <div>
             <div className="mb-5 inline-flex items-center justify-center rounded-2xl bg-[#141414] border border-[#D4AF37]/40 p-1.5 shadow-xl">
@@ -138,7 +136,7 @@ export default function AdminLogin() {
               ) : (
                 <>
                   <Lock size={14} />
-                  {l('Sign In to CLAD Portal', 'CLAD போர்ட்டலில் உள்நுழு')}
+                  {l(`Sign In to ${BRAND_EN} Portal`, `${BRAND_EN} போர்ட்டலில் உள்நுழை`)}
                 </>
               )}
             </button>
