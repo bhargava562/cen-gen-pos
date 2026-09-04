@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useMemo, useRef, type FormEvent } from 'react'
 import {
   BarChart2, Trash2, Edit2, List, ShoppingCart, LayoutDashboard,
-  Box, AlertCircle, ArrowUp, ArrowDown, Power, Download, TrendingUp,
+  Box, AlertCircle, ArrowUp, ArrowDown, Power, Download, TrendingUp, TrendingDown,
   Package, Search, RefreshCw, ShieldCheck, ShieldOff, Trophy,
   MessageCircle, ChevronDown, Eye, FileText, Printer, MoreVertical, X, Layers, Receipt,
 } from 'lucide-react'
@@ -52,6 +52,7 @@ import AdvanceOrders from './AdvanceOrders'
 import type { AdvanceOrder } from '../services/advanceOrderService'
 import { InventoryTable } from '../components/inventory/InventoryTable'
 import { ExpensesView } from '../components/expenses/ExpensesView'
+import { expenseService, type ExpenseRecord } from '../services/expenseService'
 import { BRAND_EN, BRAND_LOGO } from '../lib/brand'
 import {
   ResponsiveContainer,
@@ -239,6 +240,7 @@ export default function Dashboard() {
   const [analyticsDatePreset, setAnalyticsDatePreset] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all')
   const [analyticsDateFrom, setAnalyticsDateFrom] = useState('')
   const [analyticsDateTo, setAnalyticsDateTo] = useState('')
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
 
   // Order Management bill type filter
   const [billTypeFilter, setBillTypeFilter] = useState<'all' | 'offline' | 'online' | 'manual'>('all')
@@ -383,6 +385,15 @@ export default function Dashboard() {
     const posRevenue         = offlinePOS.reduce((s, o) => s + getOrderTotal(o), 0)
     const onlinePosRevenue   = onlinePOS.reduce((s, o) => s + getOrderTotal(o), 0)
     const manualRevenue      = manualSales.reduce((s, o) => s + getOrderTotal(o), 0)
+
+    // Expenses & Net Profit calculation:
+    // Net Profit = Revenue (total selling based on orders) - Total Expense (from expense tracker)
+    let datedExpenses = expenses
+    if (analyticsDateFrom) datedExpenses = datedExpenses.filter(e => e.expense_date >= analyticsDateFrom)
+    if (analyticsDateTo)   datedExpenses = datedExpenses.filter(e => e.expense_date <= analyticsDateTo)
+    const totalExpenses = datedExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)
+    const netProfit = completedRevenue - totalExpenses
+    const isProfitable = netProfit >= 0
 
     const toLocalDateKey = (value: string | Date) => {
       const date = value instanceof Date ? value : new Date(value)
@@ -689,8 +700,11 @@ export default function Dashboard() {
       waCompleted,
       topWAProducts,
       topWACategories,
+      totalExpenses,
+      netProfit,
+      isProfitable,
     }
-  }, [orders, orderItems, products, analyticsDateFrom, analyticsDateTo])
+  }, [orders, orderItems, products, expenses, analyticsDateFrom, analyticsDateTo])
 
   // Bill-type filtered results for Order Management table (client-side, instant)
   const filteredSearchResults = useMemo(() => {
@@ -711,7 +725,7 @@ export default function Dashboard() {
     setLoading(true)
     try {
       const productsPromise = fetchProducts(true)
-      const [cRes, oRes, couponRes] = await Promise.all([
+      const [cRes, oRes, couponRes, expList] = await Promise.all([
         supabase.from('categories').select('id, name_en, name_ta, is_active, sort_order').order('sort_order'),
         supabase.from('orders')
           .select('id, invoice_no, customer_name, phone, address, created_at, total, status, order_mode, order_type, user_id, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, invoice_pdf_url, remarks, reference_number')
@@ -720,6 +734,7 @@ export default function Dashboard() {
         supabase.from('coupons')
           .select('id, code, percentage, is_active, expiry_date, usage_limit, usage_count, min_order_value')
           .order('created_at', { ascending: false }),
+        expenseService.getExpenses(),
       ])
       if (cRes.error) throw cRes.error
       if (oRes.error) throw oRes.error
@@ -728,6 +743,7 @@ export default function Dashboard() {
       setOrders(mappedOrders)
       setSearchResults(mappedOrders.filter(o => normalizeOrderType(o.order_type) !== 'online_request').slice(0, 100))
       setCoupons((couponRes.data || []) as DashboardCoupon[])
+      setExpenses(expList || [])
 
       const orderIds = mappedOrders.map(o => o.id).filter(Boolean)
       if (orderIds.length > 0) {
@@ -1026,6 +1042,7 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, handleChange)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, handleChange)
       .subscribe()
     return () => { void supabase.removeChannel(ch) }
   }, [isAdmin, loadData])
@@ -1634,21 +1651,38 @@ export default function Dashboard() {
             {analyticsTab === 'revenue' && (
               <>
 
-            {/* Revenue KPIs - 5 cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+            {/* Revenue KPIs - 6 cards in 3 columns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { label: l('Total Revenue', 'மொத்த வருவாய்'),    value: formatCurrency(analytics.totalCompletedRevenue), from: 'from-emerald-50 via-emerald-50/80 to-teal-50', iconBg: 'from-emerald-400 to-teal-500', icon: <RMIcon size={16} /> },
+                {
+                  label: analytics.isProfitable ? l('Net Profit', 'நிகர லாபம்') : l('Net Loss', 'நிகர நஷ்டம்'),
+                  value: formatCurrency(Math.abs(analytics.netProfit)),
+                  from: analytics.isProfitable ? 'from-emerald-50 via-teal-50/80 to-green-50' : 'from-rose-50 via-red-50/80 to-orange-50',
+                  iconBg: analytics.isProfitable ? 'from-emerald-500 to-teal-600' : 'from-rose-500 to-red-600',
+                  icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
+                  arrow: analytics.isProfitable ? '↑' : '↓',
+                  arrowColor: analytics.isProfitable ? 'text-emerald-700 bg-emerald-100' : 'text-rose-700 bg-rose-100',
+                  valueColor: analytics.isProfitable ? 'text-emerald-700' : 'text-rose-700',
+                },
+                { label: l('Total Expenses', 'மொத்த செலவு'),    value: formatCurrency(analytics.totalExpenses),         from: 'from-amber-50 via-amber-50/80 to-orange-50', iconBg: 'from-amber-400 to-orange-500', icon: <Receipt size={16} /> },
                 { label: l("Today's Sales",  'இன்றைய விற்பனை'),  value: formatCurrency(analytics.todaySales),            from: 'from-blue-50 via-blue-50/80 to-indigo-50', iconBg: 'from-blue-400 to-indigo-500', icon: <TrendingUp size={16} /> },
                 { label: l('Offline Revenue', 'ஆஃப்லைன் வருவாய்'), value: formatCurrency(analytics.posRevenue),           from: 'from-orange-50 via-orange-50/80 to-amber-50', iconBg: 'from-orange-400 to-amber-500', icon: <RMIcon size={16} /> },
                 { label: l('Online Revenue',  'ஆன்லைன் வருவாய்'),  value: formatCurrency(analytics.onlinePosRevenue),     from: 'from-cyan-50 via-cyan-50/80 to-sky-50', iconBg: 'from-cyan-400 to-sky-500', icon: <RMIcon size={16} /> },
-                { label: l('Manual Revenue',  'கைமுறை வருவாய்'),   value: formatCurrency(analytics.manualRevenue),        from: 'from-violet-50 via-violet-50/80 to-purple-50', iconBg: 'from-violet-400 to-purple-500', icon: <ShoppingCart size={16} /> },
               ].map((card, i) => (
-                <div key={i} className={`bg-gradient-to-br ${card.from} rounded-2xl border border-white/40 p-4 shadow-sm backdrop-blur-sm`}>
+                <div key={i} className={`bg-gradient-to-br ${card.from} rounded-2xl border border-white/40 p-4 sm:p-5 shadow-sm backdrop-blur-sm flex flex-col justify-between`}>
                   <div className="flex items-center justify-between gap-1 mb-2">
-                    <p className="text-[10px] uppercase font-black text-[#374151] tracking-wider leading-tight">{card.label}</p>
-                    <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-white shrink-0 shadow-sm`}>{card.icon}</div>
+                    <p className="text-[11px] uppercase font-black text-[#374151] tracking-wider leading-tight">{card.label}</p>
+                    <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-white shrink-0 shadow-sm`}>{card.icon}</div>
                   </div>
-                  <p className="text-[20px] font-black text-[#111111] break-words leading-tight">{card.value}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`text-[21px] sm:text-[23px] font-black break-words leading-tight ${card.valueColor || 'text-[#111111]'}`}>{card.value}</p>
+                    {card.arrow && (
+                      <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-md ${card.arrowColor}`}>
+                        {card.arrow}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -2106,8 +2140,8 @@ export default function Dashboard() {
               {/* Status Distribution - compact bar */}
               <div className="bg-white rounded-2xl border border-[#E5E7EB]/30 p-4 shadow-sm">
                 <h3 className="text-[13px] font-black text-[#111111] mb-3">{l('Status Distribution', 'நிலை விளக்கம்')}</h3>
-                <div className="h-36 w-full min-w-0 relative">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <div className="h-[144px] w-full min-w-0 relative">
+                  <ResponsiveContainer width="100%" height={144} minWidth={0} minHeight={0}>
                     <BarChart data={analytics.statusDistribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD0" />
                       <XAxis dataKey="name" tick={{ fill: '#6B7661', fontSize: 9 }} axisLine={false} tickLine={false} />
@@ -2180,43 +2214,109 @@ export default function Dashboard() {
             {/* Revenue sub-tab */}
             {posAnalyticsTab === 'revenue' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                   {[
-                    { label: 'TOTAL REVENUE',    helper: 'POS + manual combined', value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'COMPLETED BILLS',  helper: 'POS + manual bills',    value: analytics.completedOrders,                       icon: <Trophy size={16} />,      color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'OFFLINE BILLS',    helper: 'Walk-in POS sales',     value: formatCurrency(analytics.posRevenue),            icon: <RMIcon size={16} />, color: 'text-cyan-500',    bg: 'bg-cyan-50' },
-                    { label: 'ONLINE BILLS',     helper: 'Online POS sales',      value: formatCurrency(analytics.onlinePosRevenue),      icon: <RMIcon size={16} />, color: 'text-indigo-500',  bg: 'bg-indigo-50' },
+                    {
+                      label: 'TOTAL REVENUE',
+                      helper: 'POS + manual sales combined',
+                      value: formatCurrency(analytics.totalCompletedRevenue),
+                      icon: <RMIcon size={16} />,
+                      color: 'text-emerald-500',
+                      bg: 'bg-emerald-50',
+                    },
+                    {
+                      label: analytics.isProfitable ? 'NET PROFIT' : 'NET LOSS',
+                      helper: `Revenue (${formatCurrency(analytics.totalCompletedRevenue)}) − Expenses (${formatCurrency(analytics.totalExpenses)})`,
+                      value: formatCurrency(Math.abs(analytics.netProfit)),
+                      icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
+                      color: analytics.isProfitable ? 'text-emerald-600' : 'text-rose-600',
+                      bg: analytics.isProfitable ? 'bg-emerald-50' : 'bg-rose-50',
+                      valueColor: analytics.isProfitable ? 'text-emerald-600' : 'text-rose-600',
+                      arrow: analytics.isProfitable ? '↑' : '↓',
+                    },
+                    {
+                      label: 'TOTAL EXPENSES',
+                      helper: 'Overheads from expense tracker',
+                      value: formatCurrency(analytics.totalExpenses),
+                      icon: <Receipt size={16} />,
+                      color: 'text-amber-500',
+                      bg: 'bg-amber-50',
+                    },
+                    {
+                      label: 'COMPLETED BILLS',
+                      helper: 'POS + manual bills',
+                      value: String(analytics.completedOrders),
+                      icon: <Trophy size={16} />,
+                      color: 'text-emerald-500',
+                      bg: 'bg-emerald-50',
+                    },
+                    {
+                      label: 'OFFLINE REVENUE',
+                      helper: 'Walk-in POS sales',
+                      value: formatCurrency(analytics.posRevenue),
+                      icon: <RMIcon size={16} />,
+                      color: 'text-cyan-500',
+                      bg: 'bg-cyan-50',
+                    },
+                    {
+                      label: 'TOTAL OFFLINE BILLS',
+                      helper: 'Walk-in POS orders',
+                      value: String(analytics.offlineOrderCount),
+                      icon: <LayoutDashboard size={16} />,
+                      color: 'text-red-500',
+                      bg: 'bg-red-50',
+                    },
+                    {
+                      label: 'TOTAL ONLINE BILLS',
+                      helper: 'Live completed online bills',
+                      value: String(analytics.onlineBillCount),
+                      icon: <Box size={16} />,
+                      color: 'text-blue-500',
+                      bg: 'bg-blue-50',
+                    },
+                    {
+                      label: 'TOTAL ITEMS SOLD',
+                      helper: 'From completed bills',
+                      value: String(Math.round(analytics.totalProductsSold)),
+                      icon: <Box size={16} />,
+                      color: 'text-purple-500',
+                      bg: 'bg-purple-50',
+                    },
+                    {
+                      label: 'AVERAGE REVENUE PER BILL',
+                      helper: 'Average per bill',
+                      value: formatCurrency(analytics.averageRevenuePerBill),
+                      icon: <RMIcon size={16} />,
+                      color: 'text-emerald-500',
+                      bg: 'bg-emerald-50',
+                    },
+                    {
+                      label: 'TOP PRODUCT',
+                      helper: 'Most sold item',
+                      value: analytics.bestProduct || 'No sales yet',
+                      icon: <Trophy size={16} />,
+                      color: 'text-pink-500',
+                      bg: 'bg-pink-50',
+                    },
                   ].map((card, index) => (
-                    <div key={index} className="bg-white rounded-card border border-borderLight p-5 shadow-soft">
-                      <div className="flex items-start justify-between gap-2 mb-4">
-                        <div>
-                          <p className="text-[11px] font-bold text-[#111111] uppercase tracking-wider mb-1">{card.label}</p>
+                    <div key={index} className="bg-white rounded-card border border-borderLight p-5 sm:p-5 shadow-soft flex flex-col justify-between hover:shadow-md transition-shadow">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <p className="text-[11px] font-bold text-[#111111] uppercase tracking-wider">{card.label}</p>
+                          <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center ${card.color} shrink-0`}>{card.icon}</div>
                         </div>
-                        <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center ${card.color}`}>{card.icon}</div>
-                      </div>
-                      <p className="text-[28px] font-bold text-[#111111] leading-none mb-2">{card.value}</p>
-                      <p className="text-[12px] text-[#6B7280]">{card.helper}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-                  {[
-                    { label: 'TOTAL OFFLINE BILLS', helper: 'Walk-in POS orders',    value: analytics.offlineOrderCount,                    icon: <LayoutDashboard size={16} />, color: 'text-red-500',    bg: 'bg-red-50' },
-                    { label: 'TOTAL ONLINE BILLS',  helper: 'Live completed online bills', value: analytics.onlineBillCount,               icon: <Box size={16} />,             color: 'text-blue-500',   bg: 'bg-blue-50' },
-                    { label: 'TOTAL ITEMS SOLD',    helper: 'From completed bills',  value: Math.round(analytics.totalProductsSold),         icon: <Box size={16} />,             color: 'text-purple-500', bg: 'bg-purple-50' },
-                    { label: 'AVERAGE REVENUE PER BILL', helper: 'Average per Bill', value: formatCurrency(analytics.averageRevenuePerBill), icon: <RMIcon size={16} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                    { label: 'TOP PRODUCT',         helper: 'Most sold item',        value: analytics.bestProduct || '-',                    icon: <Trophy size={16} />,          color: 'text-pink-500',   bg: 'bg-pink-50' },
-                  ].map((card, index) => (
-                    <div key={index} className="bg-white rounded-card border border-borderLight p-5 shadow-soft">
-                      <div className="flex items-start justify-between gap-2 mb-4">
-                        <div>
-                          <p className="text-[11px] font-bold text-[#111111] uppercase tracking-wider mb-1">{card.label}</p>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <p className={`text-[22px] sm:text-[24px] font-bold leading-tight ${card.valueColor || 'text-[#111111]'}`}>
+                            {card.value}
+                          </p>
+                          {card.arrow && (
+                            <span className={`inline-flex items-center text-xs font-black px-1.5 py-0.5 rounded-md ${card.bg} ${card.color}`}>
+                              {card.arrow}
+                            </span>
+                          )}
                         </div>
-                        <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center ${card.color}`}>{card.icon}</div>
                       </div>
-                      <p className="text-[22px] font-bold text-[#111111] leading-none mb-2 truncate">{card.value}</p>
-                      <p className="text-[12px] text-[#6B7280]">{card.helper}</p>
+                      <p className="text-[12px] text-[#6B7280] leading-snug" title={card.helper}>{card.helper}</p>
                     </div>
                   ))}
                 </div>
@@ -2227,8 +2327,8 @@ export default function Dashboard() {
                       <h3 className="text-[16px] font-bold text-[#111111]">Revenue Trend {analytics.chartYear}</h3>
                       <span className="text-[12px] font-bold text-[#0A0A0A] bg-red-50 px-2.5 py-1 rounded-md">Avg {formatCurrency(analytics.monthlyRevenue || 0)}/mo</span>
                     </div>
-                    <div className="h-48 w-full min-w-0 relative">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <div className="h-[192px] w-full min-w-0 relative">
+                      <ResponsiveContainer width="100%" height={192} minWidth={0} minHeight={0}>
                         <BarChart data={analytics.monthlyTrend}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                           <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
@@ -2300,8 +2400,8 @@ export default function Dashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="h-64 w-full min-w-0 relative">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <div className="h-[256px] w-full min-w-0 relative">
+                      <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={0}>
                         <BarChart data={analytics.weeklySales}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                           <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
@@ -2641,8 +2741,8 @@ export default function Dashboard() {
                   <div className="xl:col-span-2 bg-white rounded-2xl border border-[#E5E7EB]/30 p-5 shadow-sm">
                     <h3 className="text-[15px] font-bold text-[#111111] mb-4">Coupon Usage (Last 7 Days)</h3>
                     {analytics.couponDailyTrend.some(d => d.orders > 0) ? (
-                      <div className="h-64 w-full min-w-0 relative">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <div className="h-[256px] w-full min-w-0 relative">
+                        <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={0}>
                           <BarChart data={analytics.couponDailyTrend}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                             <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />

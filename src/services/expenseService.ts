@@ -168,7 +168,12 @@ export const expenseService = {
           query = query.lte('expense_date', filters.toDate)
         }
         if (filters?.categoryId && filters.categoryId !== 'all') {
-          query = query.eq('category_id', filters.categoryId)
+          const catNum = Number(filters.categoryId)
+          if (!Number.isNaN(catNum) && catNum > 0) {
+            query = query.eq('category_id', catNum)
+          } else {
+            query = query.ilike('category_name', String(filters.categoryId))
+          }
         }
 
         const { data, error } = await query
@@ -197,7 +202,11 @@ export const expenseService = {
       local = local.filter((e) => e.expense_date <= filters.toDate!)
     }
     if (filters?.categoryId && filters.categoryId !== 'all') {
-      local = local.filter((e) => String(e.category_id) === String(filters.categoryId))
+      local = local.filter(
+        (e) =>
+          String(e.category_id) === String(filters.categoryId) ||
+          e.category_name.toLowerCase() === String(filters.categoryId).toLowerCase()
+      )
     }
 
     return local.sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())

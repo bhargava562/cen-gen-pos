@@ -66,8 +66,8 @@ export default function CompactAnalytics({ analytics }: CompactAnalyticsProps) {
               <Sparkles size={12} className="text-[#D4AF37]" /> Premium
             </div>
           </div>
-          <div className="h-52 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <div className="h-[224px] w-full min-w-0">
+            <ResponsiveContainer width="100%" height={224} minWidth={0} minHeight={0}>
               <LineChart data={analytics.monthlyTrend}>
                 <CartesianGrid vertical={false} stroke="#ECE5DA" strokeDasharray="3 6" />
                 <XAxis dataKey="month" tick={chartAxis} axisLine={false} tickLine={false} />
@@ -86,8 +86,8 @@ export default function CompactAnalytics({ analytics }: CompactAnalyticsProps) {
               <p className="text-[11px] text-[#7A846F] mt-1">Order mix by completed revenue</p>
             </div>
           </div>
-          <div className="h-52 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <div className="h-[224px] w-full min-w-0">
+            <ResponsiveContainer width="100%" height={224} minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie data={analytics.channelDistribution} dataKey="value" nameKey="name" innerRadius={58} outerRadius={84} paddingAngle={4} stroke="rgba(255,255,255,0.85)" strokeWidth={2}>
                   {analytics.channelDistribution.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
@@ -117,8 +117,8 @@ export default function CompactAnalytics({ analytics }: CompactAnalyticsProps) {
         <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-[#E7DED0] bg-[#FBFCF9] p-4">
             <h4 className="text-[13px] font-black text-[#223126] mb-3">Top Categories</h4>
-            <div className="h-48 sm:h-52">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="h-[208px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height={208} minWidth={0} minHeight={0}>
                 <BarChart data={analytics.topCategories} layout="vertical" margin={{ left: 8, right: 8 }}>
                   <CartesianGrid horizontal={false} stroke="#ECE5DA" strokeDasharray="3 6" />
                   <XAxis type="number" tick={chartAxis} axisLine={false} tickLine={false} width={30} />
@@ -132,8 +132,8 @@ export default function CompactAnalytics({ analytics }: CompactAnalyticsProps) {
 
           <div className="rounded-2xl border border-[#E7DED0] bg-[#FBFCF9] p-4">
             <h4 className="text-[13px] font-black text-[#223126] mb-3">Weekly Sales</h4>
-            <div className="h-48 sm:h-52">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="h-[208px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height={208} minWidth={0} minHeight={0}>
                 <BarChart data={analytics.weeklySales}>
                   <CartesianGrid vertical={false} stroke="#ECE5DA" strokeDasharray="3 6" />
                   <XAxis dataKey="day" tick={chartAxis} axisLine={false} tickLine={false} />

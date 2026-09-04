@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Download,
   Plus,
@@ -8,6 +8,9 @@ import {
   RefreshCw,
   TrendingDown,
   Layers,
+  Search,
+  X,
+  Filter,
 } from 'lucide-react'
 import {
   expenseService,
@@ -37,10 +40,12 @@ export const ExpensesView: React.FC = () => {
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Date Filters
+  // Filters
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [activePreset, setActivePreset] = useState<'all' | 'today' | 'week' | 'month'>('all')
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const loadMetrics = useCallback(async () => {
     try {
@@ -66,6 +71,7 @@ export const ExpensesView: React.FC = () => {
       const data = await expenseService.getExpenses({
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
+        categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
       })
       setExpenses(data)
     } catch (err) {
@@ -73,7 +79,7 @@ export const ExpensesView: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [fromDate, toDate])
+  }, [fromDate, toDate, selectedCategoryId])
 
   const refreshAll = useCallback(async () => {
     await Promise.all([loadMetrics(), loadCategories(), loadExpenses()])
@@ -82,6 +88,20 @@ export const ExpensesView: React.FC = () => {
   useEffect(() => {
     void refreshAll()
   }, [refreshAll])
+
+  // Filter expenses list by search query
+  const filteredExpenses = useMemo(() => {
+    if (!searchQuery.trim()) return expenses
+    const q = searchQuery.toLowerCase().trim()
+    return expenses.filter(
+      (e) =>
+        e.description?.toLowerCase().includes(q) ||
+        e.category_name?.toLowerCase().includes(q) ||
+        e.payment_mode?.toLowerCase().includes(q) ||
+        e.recorded_by_name?.toLowerCase().includes(q) ||
+        String(e.amount).includes(q)
+    )
+  }, [expenses, searchQuery])
 
   // Handle Preset Clicks (Synchronizes FROM and TO dates)
   const applyDatePreset = (preset: 'all' | 'today' | 'week' | 'month') => {
@@ -107,6 +127,15 @@ export const ExpensesView: React.FC = () => {
       setToDate(todayStr)
     }
   }
+
+  const resetAllFilters = () => {
+    setFromDate('')
+    setToDate('')
+    setActivePreset('all')
+    setSelectedCategoryId('all')
+    setSearchQuery('')
+  }
+
 
   const handleDeleteExpense = async (id: string) => {
     if (!window.confirm('Delete this expense record?')) return
@@ -212,7 +241,8 @@ export const ExpensesView: React.FC = () => {
           </div>
 
           {/* Filter Bar */}
-          <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-xs space-y-3.5">
+          <div className="bg-white border border-gray-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+            {/* Top Row: Date Presets & Action Buttons */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               {/* Date Filters & Presets */}
               <div className="flex flex-wrap items-center gap-2.5">
@@ -276,8 +306,8 @@ export const ExpensesView: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => exportExpensesToCSV(expenses)}
-                  disabled={expenses.length === 0}
+                  onClick={() => exportExpensesToCSV(filteredExpenses)}
+                  disabled={filteredExpenses.length === 0}
                   className="h-10 px-4 rounded-xl border border-gray-300 bg-white text-xs font-black uppercase tracking-wider text-gray-800 hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-40"
                 >
                   <Download size={14} /> Export CSV
@@ -291,14 +321,80 @@ export const ExpensesView: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Bottom Row: Category Dropdown & Keyword Search Filter */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-3 border-t border-gray-100">
+              {/* Category Dropdown */}
+              <div className="sm:col-span-4 lg:col-span-3">
+                <div className="relative">
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full h-10 pl-9 pr-8 rounded-xl border border-gray-300 bg-[#FAFAFA] text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A] cursor-pointer appearance-none"
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">
+                    ▼
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Search Box */}
+              <div className="sm:col-span-8 lg:col-span-9 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by description, category, staff name, or amount..."
+                    className="w-full h-10 pl-9 pr-9 rounded-xl border border-gray-300 bg-[#FAFAFA] text-xs font-medium text-gray-900 outline-none focus:border-[#0A0A0A]"
+                  />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {(selectedCategoryId !== 'all' || searchQuery || fromDate || toDate) && (
+                  <button
+                    type="button"
+                    onClick={resetAllFilters}
+                    className="h-10 px-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-600 hover:text-black hover:bg-gray-100 text-xs font-bold whitespace-nowrap transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Expenses Table */}
           <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
             <div className="p-5 border-b border-gray-100 bg-[#FAFAFA] flex items-center justify-between">
               <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
-                Expense Records ({expenses.length})
+                Expense Records ({filteredExpenses.length})
               </h4>
+              {selectedCategoryId !== 'all' && (
+                <span className="text-[11px] font-bold text-gray-500">
+                  Filtered by Category:{' '}
+                  <span className="text-gray-900">
+                    {categories.find((c) => String(c.id) === String(selectedCategoryId))?.name || selectedCategoryId}
+                  </span>
+                </span>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -330,15 +426,15 @@ export const ExpensesView: React.FC = () => {
                         Loading expenses...
                       </td>
                     </tr>
-                  ) : expenses.length === 0 ? (
+                  ) : filteredExpenses.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-5 py-12 text-center text-gray-400 font-bold">
                         <Layers size={32} className="mx-auto mb-2 opacity-30" />
-                        No expense records found for the selected period.
+                        No expense records found matching the filters.
                       </td>
                     </tr>
                   ) : (
-                    expenses.map((exp) => (
+                    filteredExpenses.map((exp) => (
                       <tr key={exp.id} className="hover:bg-gray-50/70 transition-colors">
                         <td className="px-5 py-3.5 font-bold text-gray-900 whitespace-nowrap">
                           {exp.expense_date}
