@@ -10,8 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: [
-        'clad-logo.jpeg',
-        'clad-logo.svg',
+        'favicon.svg',
         'pwa-192x192.png',
         'pwa-512x512.png',
         'maskable-icon-512x512.png',
@@ -19,9 +18,9 @@ export default defineConfig({
         'robots.txt',
       ],
       manifest: {
-        name: 'CLAD Retail POS',
-        short_name: 'CLAD',
-        description: 'CLAD retail billing, barcode inventory, catalog, order, receipt, and invoice administration.',
+        name: 'CLAD Clothing Retail POS',
+        short_name: 'CLAD Clothing',
+        description: 'CLAD Clothing retail billing, barcode inventory, catalog, order, receipt, and invoice administration.',
         theme_color: '#0A0A0A',
         background_color: '#FBFAF6',
         display: 'standalone',

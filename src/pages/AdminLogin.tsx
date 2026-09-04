@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAdminAuthStore } from '../store/store'
-import { BRAND_EN, BRAND_LOGO, BRAND_TA, BRAND_SUBTITLE } from '../lib/brand'
+import { BRAND_EN, BRAND_TA, BRAND_SUBTITLE } from '../lib/brand'
 import { useLangStore } from '../store/langStore'
 
 export default function AdminLogin() {
@@ -41,8 +41,9 @@ export default function AdminLogin() {
       <div className="relative grid w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl border border-gray-200/90 bg-[#141414] shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25),0_12px_28px_-6px_rgba(0,0,0,0.15)] lg:grid-cols-[0.85fr_1.15fr]">
         <div className="hidden flex-col justify-between bg-[#0A0A0A] border-r border-[#D4AF37]/20 p-6 lg:p-8 text-white lg:flex overflow-y-auto hide-scrollbar">
           <div>
-            <div className="mb-5 inline-flex items-center justify-center rounded-2xl bg-[#141414] border border-[#D4AF37]/40 p-1.5 shadow-xl">
-              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-10 w-auto max-w-[150px] rounded-xl object-contain" />
+            <div className="mb-5 inline-flex items-center gap-2 rounded-2xl bg-[#141414] border border-[#D4AF37]/40 px-3.5 py-2 shadow-xl">
+              <span className="font-serif text-lg font-black text-[#D4AF37] tracking-wider">C</span>
+              <span className="text-xs font-black tracking-widest text-white uppercase">{BRAND_EN}</span>
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#D4AF37]">{BRAND_SUBTITLE}</p>
             <h2 className="mt-3 max-w-xs text-2xl lg:text-3xl font-black leading-tight tracking-tight text-white">Everything you need to run retail billing clearly.</h2>
@@ -53,9 +54,6 @@ export default function AdminLogin() {
         <div className="p-5 sm:p-7 lg:p-8 bg-white text-[#111111] overflow-y-auto hide-scrollbar flex flex-col justify-center">
           {/* Brand */}
           <div className="mb-4 sm:mb-5 flex flex-col items-center text-center lg:items-start lg:text-left">
-            <div className="mb-3 inline-flex items-center justify-center rounded-2xl bg-[#0A0A0A] border border-[#D4AF37]/40 p-1.5 shadow-xl lg:hidden">
-              <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-9 w-auto max-w-[140px] rounded-xl object-contain" />
-            </div>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#B48811]">{BRAND_SUBTITLE}</p>
             <h1 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-[#0A0A0A]">{BRAND_EN}</h1>
             <p className="mt-0.5 text-xs font-semibold text-[#7A786F]">{BRAND_TA}</p>

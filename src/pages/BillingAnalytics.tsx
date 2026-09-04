@@ -41,7 +41,7 @@ const RMIcon = ({ size = 16, className = '' }: { size?: number; className?: stri
 )
 import { useAuthStore, useProductStore, type Product } from '../store/store'
 import { formatCurrency, normalizeOrderMode, toNumber } from '../lib/retail'
-import { BRAND_EN, BRAND_LOGO } from '../lib/brand'
+import { BRAND_EN } from '../lib/brand'
 
 type BillingOrder = {
   id: string
@@ -598,9 +598,9 @@ export default function BillingAnalytics() {
       <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="admin-logo-lockup min-w-[280px]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white border border-emerald-900/30 p-1 shadow-sm overflow-hidden shrink-0">
-                <img src={BRAND_LOGO} alt={`${BRAND_EN} logo`} className="h-full w-full object-contain" />
-              </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0A0A0A] border border-[#D4AF37]/40 shadow-sm shrink-0">
+              <span className="font-serif text-xl font-black text-[#D4AF37]">C</span>
+            </div>
             <div className="min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#5F5F5F]">Admin Billing</p>
               <h1 className="mt-1 truncate text-2xl font-black text-[#111111]">{l('Billing Analytics', 'பில் பகுப்பாய்வு')}</h1>
