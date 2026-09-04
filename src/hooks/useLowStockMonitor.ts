@@ -1,20 +1,20 @@
 import { useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { useAlarmStore, type LowStockItem } from '../store/alarmStore'
 
-export function useLowStockMonitor() {
+export function useLowStockMonitor(enabled: boolean = true) {
   const setLowStockItems = useAlarmStore((state) => state.setLowStockItems)
   const isCheckingRef = useRef(false)
 
   const checkStockLevels = async () => {
-    if (isCheckingRef.current) return
+    if (!enabled || isCheckingRef.current) return
     isCheckingRef.current = true
 
     try {
       // 1. Fetch non-variant active products (exclude Unregistered)
       const { data: prods, error: prodErr } = await supabase
         .from('products')
-        .select('id, name, stock_quantity, barcode, has_variants, category')
+        .select('id, name, stock_quantity, low_stock_alert, barcode, has_variants, category, category_id')
         .eq('is_active', true)
         .eq('has_variants', false)
 
@@ -25,7 +25,7 @@ export function useLowStockMonitor() {
       // 2. Fetch active variants
       const { data: variants, error: varErr } = await supabase
         .from('product_variants')
-        .select('id, variant_name, stock, barcode, product_id, is_active, products(name, category, is_active)')
+        .select('id, variant_name, stock, barcode, product_id, is_active, products(name, category, category_id, is_active)')
         .eq('is_active', true)
 
       if (varErr) {
@@ -34,15 +34,19 @@ export function useLowStockMonitor() {
 
       const flagged: LowStockItem[] = []
 
-      // Check standard products
+      // Check standard products (Only alert for actual inventory running low: 0 < stock <= threshold)
       for (const p of prods || []) {
-        if (p.category && p.category.trim().toLowerCase() === 'unregistered') {
+        if (
+          (p.category && p.category.trim().toLowerCase() === 'unregistered') ||
+          p.category_id === 4
+        ) {
           continue
         }
-        const threshold = 5
+        const threshold = Number(p.low_stock_alert) > 0 ? Number(p.low_stock_alert) : 5
         const currentStock = Number(p.stock_quantity) || 0
 
-        if (currentStock <= threshold) {
+        // Only flag products that have active inventory running low (exclude 0 stock / empty inventory)
+        if (currentStock > 0 && currentStock <= threshold) {
           flagged.push({
             id: `p-${p.id}`,
             name: p.name,
@@ -54,21 +58,24 @@ export function useLowStockMonitor() {
         }
       }
 
-      // Check product variants
+      // Check product variants (Only alert for actual variant inventory running low: 0 < stock <= threshold)
       for (const v of variants || []) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const parentProd = v.products as any
         if (parentProd && parentProd.is_active === false) {
           continue
         }
-        if (parentProd?.category && parentProd.category.trim().toLowerCase() === 'unregistered') {
+        if (
+          (parentProd?.category && parentProd.category.trim().toLowerCase() === 'unregistered') ||
+          parentProd?.category_id === 4
+        ) {
           continue
         }
 
         const threshold = 5
         const currentStock = Number(v.stock) || 0
 
-        if (currentStock <= threshold) {
+        if (currentStock > 0 && currentStock <= threshold) {
           flagged.push({
             id: `v-${v.id}`,
             name: parentProd?.name ? `${parentProd.name}` : 'Product Variant',
@@ -90,14 +97,35 @@ export function useLowStockMonitor() {
   }
 
   useEffect(() => {
+    if (!enabled) return
+
     // Initial check
     void checkStockLevels()
 
-    // 20-second interval continuous stock monitor
+    // 15-second interval continuous stock monitor
     const interval = setInterval(() => {
       void checkStockLevels()
-    }, 20000)
+    }, 15000)
 
-    return () => clearInterval(interval)
-  }, [])
+    if (!isSupabaseConfigured) {
+      return () => clearInterval(interval)
+    }
+
+    // Realtime channel to immediately trigger alarm on stock updates across both Admin and Staff panels
+    const realtimeChannel = supabase
+      .channel('low-stock-realtime-monitor')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        void checkStockLevels()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => {
+        void checkStockLevels()
+      })
+      .subscribe()
+
+    return () => {
+      clearInterval(interval)
+      void supabase.removeChannel(realtimeChannel)
+    }
+  }, [enabled])
 }
+

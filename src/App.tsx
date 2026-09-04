@@ -5,6 +5,8 @@ import { useAuthStore, useProductStore, useVariantStore, useAdminAuthStore } fro
 import { BRAND_EN } from './lib/brand'
 import { clearLocalOrders } from './lib/ordersFallback'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { LowStockAlarmModal } from './components/dashboard/LowStockAlarmModal'
+import { useLowStockMonitor } from './hooks/useLowStockMonitor'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Pos = lazy(() => import('./pages/Pos'))
@@ -62,6 +64,10 @@ function AppShell() {
   const initialize = useAuthStore((state) => state.initialize)
   const fetchProducts = useProductStore((state) => state.fetchProducts)
   const fetchVariants = useVariantStore((state) => state.fetchVariants)
+  const { isLoggedIn, role } = useAdminAuthStore()
+
+  const hasStaffOrAdminAccess = Boolean(isLoggedIn && (role === 'admin' || role === 'staff'))
+  useLowStockMonitor(hasStaffOrAdminAccess)
 
   useEffect(() => {
     document.title = BRAND_EN
@@ -180,6 +186,9 @@ function AppShell() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
+
+      {/* Global Low Stock Sound & Visual Alarm for Admin and Staff Panels */}
+      {hasStaffOrAdminAccess && <LowStockAlarmModal />}
     </div>
   )
 }
@@ -191,3 +200,4 @@ export default function App() {
     </BrowserRouter>
   )
 }
+

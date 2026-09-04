@@ -34,6 +34,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
   const [categoryId, setCategoryId] = useState<number | ''>('')
   const [price, setPrice] = useState<string>('')
   const [purchasePrice, setPurchasePrice] = useState<string>('')
+  const [lowStockAlert, setLowStockAlert] = useState<string>('5')
   const [barcode, setBarcode] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [hasVariants, setHasVariants] = useState<boolean>(false)
@@ -56,6 +57,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     setCategoryId('')
     setPrice('')
     setPurchasePrice('')
+    setLowStockAlert('5')
     setBarcode('')
     setDescription('')
     setHasVariants(false)
@@ -70,6 +72,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     setCategoryId(p.categoryId ? Number(p.categoryId) : '')
     setPrice(String(p.price || ''))
     setPurchasePrice(String(p.purchasePrice || ''))
+    setLowStockAlert(p.lowStockAlert ? String(p.lowStockAlert) : '5')
     setBarcode(p.barcode || '')
     setDescription(p.description || '')
     setHasVariants(Boolean(p.hasVariants))
@@ -157,6 +160,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     try {
       if (selectedProductId) {
         // UPDATE EXISTING PRODUCT
+        const alertThreshold = Number(lowStockAlert) > 0 ? Number(lowStockAlert) : 5
         const { error: updErr } = await supabase
           .from('products')
           .update({
@@ -166,6 +170,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             price: priceNum,
             offer_price: priceNum,
             purchase_price: costNum,
+            low_stock_alert: alertThreshold,
             barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
             description: description.trim() || '',
             has_variants: hasVariants && variantRows.length > 0,
@@ -240,6 +245,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
         setStatusMessage({ type: 'success', text: `Product "${trimmedName}" updated successfully!` })
       } else {
         // CREATE NEW PRODUCT
+        const alertThreshold = Number(lowStockAlert) > 0 ? Number(lowStockAlert) : 5
         const { data: newProd, error: insErr } = await supabase
           .from('products')
           .insert({
@@ -249,6 +255,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             price: priceNum,
             offer_price: priceNum,
             purchase_price: costNum,
+            low_stock_alert: alertThreshold,
             barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
             description: description.trim() || '',
             has_variants: hasVariants && variantRows.length > 0,
@@ -323,7 +330,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
       {/* LEFT COLUMN: Products Browser List */}
       <div className="w-full lg:w-80 xl:w-96 flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm shrink-0 h-full min-h-0">
         <div className="p-3.5 border-b border-gray-200 bg-[#FAFAFA] flex items-center justify-between shrink-0">
-          <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
+          <h4 className="text-xs font-bold text-gray-800">
             Product Catalog ({products.length})
           </h4>
         </div>
@@ -380,7 +387,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
         {/* Pinned Form Header */}
         <div className="px-5 py-3.5 sm:px-6 sm:py-4 bg-white border-b border-gray-200 flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-sm font-black uppercase tracking-wider text-black flex items-center gap-2">
+            <h3 className="text-sm font-bold text-black flex items-center gap-2">
               <Package size={16} className="text-[#D4AF37]" />
               {selectedProductId ? 'Edit Product & SKU Details' : 'Add New Product to Catalog'}
             </h3>
@@ -419,7 +426,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             {/* Name Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
                   Product Name (English) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -433,7 +440,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               </div>
 
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
                   Tamil Name (Optional)
                 </label>
                 <input
@@ -446,10 +453,10 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               </div>
             </div>
 
-            {/* Category & Barcode */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Category, Barcode, and Low Stock Alert */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
                   Category
                 </label>
                 <select
@@ -467,8 +474,8 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               </div>
 
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
-                  Base Barcode {!hasVariants ? <span className="text-gray-400 font-normal">(Auto-generated if empty)</span> : <span className="text-amber-700 font-normal">(Managed by variants below)</span>}
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  Base Barcode {!hasVariants ? <span className="text-gray-400 font-normal">(Auto if empty)</span> : <span className="text-amber-700 font-normal">(Variant level)</span>}
                 </label>
                 <input
                   type="text"
@@ -479,13 +486,27 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                   className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A] disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  Low Stock Alert Threshold
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="5 (or 10 based on demand)"
+                  value={lowStockAlert}
+                  onChange={(e) => setLowStockAlert(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                />
+              </div>
             </div>
 
             {/* Base Pricing (only if no variants) */}
             {!hasVariants && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-white border border-gray-200 rounded-xl">
                 <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
                     Selling Price (₹) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -501,7 +522,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
                     Purchase / Cost Price (₹)
                   </label>
                   <input
@@ -519,7 +540,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
 
             {/* Description */}
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+              <label className="block text-[11px] font-bold text-gray-700 mb-1">
                 Description / Notes (Optional)
               </label>
               <textarea
@@ -580,7 +601,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 p-3 rounded-xl bg-[#FBFAF6] border border-gray-200 items-center"
                       >
                         <div className="sm:col-span-3">
-                          <label className="block text-[10px] font-black uppercase text-gray-600 mb-0.5">
+                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
                             Variant (e.g. Size M)
                           </label>
                           <input
@@ -594,7 +615,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-black uppercase text-gray-600 mb-0.5">
+                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
                             Price (₹)
                           </label>
                           <input
@@ -610,7 +631,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-black uppercase text-gray-600 mb-0.5">
+                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
                             Cost (₹)
                           </label>
                           <input
@@ -625,7 +646,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-black uppercase text-gray-600 mb-0.5">
+                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
                             Stock Intake
                           </label>
                           <input
@@ -639,7 +660,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-black uppercase text-gray-600 mb-0.5">
+                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
                             Barcode (Opt)
                           </label>
                           <input

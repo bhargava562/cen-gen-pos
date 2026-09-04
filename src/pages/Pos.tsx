@@ -31,8 +31,6 @@ import { fetchVariantsByProduct, type ProductVariant } from '../services/variant
 import { BarcodeScannerInput, type ScannedItemPayload } from '../components/pos/BarcodeScannerInput'
 import { AddUnregisteredItemModal } from '../components/pos/AddUnregisteredItemModal'
 import { getOrCreateUnregisteredProduct } from '../services/productService'
-import { LowStockAlarmModal } from '../components/dashboard/LowStockAlarmModal'
-import { useLowStockMonitor } from '../hooks/useLowStockMonitor'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PosItem = Product & {
@@ -124,10 +122,6 @@ type PosProps = {
 
 export default function Pos(props: PosProps = {}) {
   const embeddedMode = Boolean(props.isEmbedded)
-  if (!embeddedMode) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useLowStockMonitor()
-  }
   const { products, fetchProducts } = useProductStore()
   const { getVariants, fetchVariants } = useVariantStore()
   const { lang } = useLangStore()
@@ -995,7 +989,7 @@ export default function Pos(props: PosProps = {}) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-[11px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Customer Name</label>
+                <label className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Customer Name</label>
                 <input
                   type="text"
                   value={customer.name}
@@ -1005,7 +999,7 @@ export default function Pos(props: PosProps = {}) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Mobile Number (WhatsApp)</label>
+                <label className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Mobile Number (WhatsApp)</label>
                 <input
                   type="text"
                   value={customer.phone}
@@ -1015,7 +1009,7 @@ export default function Pos(props: PosProps = {}) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Remarks (Internal)</label>
+                <label className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Remarks (Internal)</label>
                 <input
                   type="text"
                   value={remarks}
@@ -1025,7 +1019,7 @@ export default function Pos(props: PosProps = {}) {
                 />
               </div>
               <div>
-                <label className="block text-[11px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Reference Number</label>
+                <label className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Reference Number</label>
                 <input
                   type="text"
                   value={referenceNumber}
@@ -1035,7 +1029,7 @@ export default function Pos(props: PosProps = {}) {
                 />
               </div>
               <div>
-                <label className="block text-[13px] md:text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1.5">Billing Date (Optional)</label>
+                <label className="block text-[13px] md:text-[10px] font-bold text-[#374151] mb-1.5">Billing Date (Optional)</label>
                 <input
                   id="pos-billing-date"
                   type="datetime-local"
@@ -1073,7 +1067,7 @@ export default function Pos(props: PosProps = {}) {
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 text-[11px] font-bold rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors shrink-0 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-gray-500" />
-                  <span>CLEAR ORDER</span>
+                  <span>Clear Order</span>
                 </button>
 
                 {/* Button 1: Search Catalog */}
@@ -1083,7 +1077,7 @@ export default function Pos(props: PosProps = {}) {
                   className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-[#0A0A0A] text-[#D4AF37] hover:bg-[#1A1A1A] border border-[#D4AF37] shadow-xs transition-all shrink-0 cursor-pointer"
                 >
                   <Search className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  <span className="tracking-wide uppercase">SEARCH CATALOG</span>
+                  <span className="tracking-wide">Search Catalog</span>
                 </button>
 
                 {/* Button 2: Add Item (Ad-Hoc Unregistered) */}
@@ -1093,16 +1087,16 @@ export default function Pos(props: PosProps = {}) {
                   className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-amber-600 text-white hover:bg-amber-700 shadow-xs transition-all shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span className="tracking-wide uppercase">ADD ITEM</span>
+                  <span className="tracking-wide">Add Item</span>
                 </button>
               </div>
             </div>
 
             {/* Table Header */}
             <div className="hidden md:grid grid-cols-[1fr_100px_120px_40px] gap-3 px-5 py-3 border-b border-gray-200 bg-[#FAFAFA]">
-              <span className="text-[10px] font-black text-[#374151] tracking-wider uppercase">Item Name / Description</span>
-              <span className="text-[10px] font-black text-[#374151] tracking-wider uppercase text-right">Price (₹)</span>
-              <span className="text-[10px] font-black text-[#374151] tracking-wider uppercase text-center">Qty</span>
+              <span className="text-[10px] font-bold text-[#374151] tracking-wide">Item Name / Description</span>
+              <span className="text-[10px] font-bold text-[#374151] tracking-wide text-right">Price (₹)</span>
+              <span className="text-[10px] font-bold text-[#374151] tracking-wide text-center">Qty</span>
               <span></span>
             </div>
 
@@ -1661,9 +1655,6 @@ export default function Pos(props: PosProps = {}) {
           </div>
         </div>
       )}
-
-      {/* Floating Low Stock Sound & Visual Alarm Modal (Standalone POS) */}
-      {!embeddedMode && <LowStockAlarmModal />}
     </div>
   )
 }

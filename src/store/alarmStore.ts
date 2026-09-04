@@ -28,25 +28,26 @@ export const useAlarmStore = create<AlarmState>((set, get) => ({
   setLowStockItems: (items) => {
     const { silencedItemIds } = get()
     
-    // Alarm triggers if there is at least one low-stock item that has not been acknowledged/silenced
+    // Alarm triggers only if there is at least one low-stock item that has not been acknowledged
     const hasUnsilencedLowStock = items.some(
-      (item) => !silencedItemIds.has(item.id)
+      (item) => !silencedItemIds.has(String(item.id)) && !silencedItemIds.has(item.id)
     )
 
     if (items.length > 0 && hasUnsilencedLowStock) {
       alarmSound.startAlert()
       set({ lowStockItems: items, isAlarmActive: true })
     } else {
-      set({ lowStockItems: items })
+      // If no items or all items are acknowledged/silenced, ensure alert is stopped
+      alarmSound.stopAlert()
+      set({ lowStockItems: items, isAlarmActive: false })
       if (items.length === 0) {
-        alarmSound.stopAlert()
-        set({ isAlarmActive: false, silencedItemIds: new Set() })
+        set({ silencedItemIds: new Set() })
       }
     }
   },
 
   silenceAlarm: () => {
-    const currentItemIds = get().lowStockItems.map((i) => i.id)
+    const currentItemIds = get().lowStockItems.map((i) => String(i.id))
     alarmSound.stopAlert()
     set({
       isAlarmActive: false,

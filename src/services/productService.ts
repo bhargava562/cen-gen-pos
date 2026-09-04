@@ -53,7 +53,6 @@ export async function updateItemPrice(params: {
       updated_at: new Date().toISOString(),
     }
     if (params.newCostPrice !== undefined && params.newCostPrice >= 0) {
-      updatePayload.cost_price = params.newCostPrice
       updatePayload.purchase_price = params.newCostPrice
     }
     const { error } = await supabase

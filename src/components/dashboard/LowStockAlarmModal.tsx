@@ -21,7 +21,7 @@ export const LowStockAlarmModal: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-300 animate-ping" />
-                <h3 className="font-black text-sm uppercase tracking-wider">
+                <h3 className="font-black text-sm tracking-wide">
                   Low Stock Alarm Active
                 </h3>
               </div>
@@ -31,7 +31,7 @@ export const LowStockAlarmModal: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-white/20 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider animate-pulse">
+          <div className="flex items-center gap-1.5 bg-white/20 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide animate-pulse">
             <Volume2 className="w-3.5 h-3.5" />
             <span>Alarm Sounding</span>
           </div>
@@ -43,7 +43,7 @@ export const LowStockAlarmModal: React.FC = () => {
             The audible alarm and visual alert will sound until acknowledged.
           </p>
           <span className="font-bold text-[11px] bg-red-200/80 px-2 py-0.5 rounded-lg">
-            Threshold &le; 5
+            Item Limits Active
           </span>
         </div>
 
@@ -115,7 +115,7 @@ export const LowStockAlarmModal: React.FC = () => {
           <button
             type="button"
             onClick={silenceAlarm}
-            className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white text-xs font-black uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white text-xs font-black tracking-wide shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <VolumeX className="w-4 h-4" />
             <span>Silence Alarm &amp; Acknowledge</span>

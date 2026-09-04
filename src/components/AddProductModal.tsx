@@ -20,6 +20,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
     name: '',
     category: '',
     price: '',
+    lowStockAlert: '5',
   })
 
   const existingCategories = categoryOptions.length > 0
@@ -72,6 +73,8 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
         }
       }
 
+      const alertThreshold = Number(formData.lowStockAlert) > 0 ? Number(formData.lowStockAlert) : 5
+
       // Products initialize with stock = 0. Stock enters through barcode receiving.
       const { error: dbErr } = await supabase.from('products').insert({
         name: formData.name.trim(),
@@ -80,6 +83,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
         price: Number(formData.price),
         stock: 0,
         stock_quantity: 0,
+        low_stock_alert: alertThreshold,
         is_active: true,
         unit: '1pc',
         base_quantity: 1,
@@ -116,7 +120,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
           {error && <div className="text-red-600 text-xs font-bold bg-red-50 p-3 rounded-xl border border-red-200">{error}</div>}
 
           <div>
-            <label className="block text-[11px] font-black text-gray-700 tracking-wider uppercase mb-1.5">Product Name <span className="text-red-500">*</span></label>
+            <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Product Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={formData.name}
@@ -129,7 +133,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-black text-gray-700 tracking-wider uppercase mb-1.5">Category</label>
+              <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Category</label>
               {categoryMode === 'select' ? (
                 <div className="flex gap-1">
                   <select
@@ -137,7 +141,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
                     onChange={e => setFormData({...formData, category: e.target.value})}
                     className="flex-1 w-full px-3 py-3 bg-[#FBFAF6] border-2 border-[#E8D399] rounded-xl focus:outline-none focus:border-[#0A0A0A] focus:bg-white text-xs font-bold appearance-none text-black"
                   >
-                    <option value="">Select category</option>
+                    <option value="">Select Category</option>
                     {existingCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
@@ -156,7 +160,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                     className="flex-1 w-full px-3 py-3 bg-[#FBFAF6] border-2 border-[#E8D399] rounded-xl focus:outline-none focus:border-[#0A0A0A] focus:bg-white text-xs font-bold text-black"
-                    placeholder="Type category"
+                    placeholder="Type Category"
                   />
                   <button
                     type="button"
@@ -168,7 +172,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
               )}
             </div>
             <div>
-              <label className="block text-[11px] font-black text-gray-700 tracking-wider uppercase mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
+              <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
               <input
                 type="number"
                 step="0.01"
@@ -181,6 +185,23 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
             </div>
           </div>
 
+          <div>
+            <label className="block text-[11px] font-bold text-gray-700 mb-1.5">
+              Low Stock Alert Limit (Threshold)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={formData.lowStockAlert}
+              onChange={e => setFormData({...formData, lowStockAlert: e.target.value})}
+              className="w-full px-4 py-2.5 bg-[#FBFAF6] border-2 border-[#E8D399] rounded-xl focus:outline-none focus:border-[#0A0A0A] focus:bg-white text-sm font-bold text-black"
+              placeholder="5 (e.g. 10 or 15 based on demand)"
+            />
+            <p className="text-[10px] text-gray-500 mt-1">
+              Sound and visual alarm triggers when available stock falls to or below this quantity.
+            </p>
+          </div>
+
           <div className="bg-[#FBFAF6] border border-[#E8D399] p-3 rounded-xl text-[11px] text-gray-600 flex items-start gap-2">
             <Sparkles size={14} className="text-[#B48811] shrink-0 mt-0.5" />
             <span>Product will be created with <strong>Stock: 0</strong>. Generate a barcode and receive stock units in the Inventory tab.</span>
@@ -189,7 +210,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full py-3.5 bg-[#0A0A0A] border border-[#D4AF37] hover:bg-[#1A1A1A] text-[#D4AF37] rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 shadow-md cursor-pointer"
+            className="mt-2 w-full py-3.5 bg-[#0A0A0A] border border-[#D4AF37] hover:bg-[#1A1A1A] text-[#D4AF37] rounded-xl text-xs font-black tracking-wider transition-all disabled:opacity-50 shadow-md cursor-pointer"
           >
             {loading ? 'Creating...' : 'Save Product'}
           </button>

@@ -150,7 +150,7 @@ export const InventoryTable: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('stock')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                 activeTab === 'stock'
                   ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                   : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -162,7 +162,7 @@ export const InventoryTable: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('products')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                 activeTab === 'products'
                   ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                   : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -174,7 +174,7 @@ export const InventoryTable: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('categories')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                 activeTab === 'categories'
                   ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                   : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -186,7 +186,7 @@ export const InventoryTable: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('analytics')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                 activeTab === 'analytics'
                   ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                   : 'text-gray-600 hover:text-black hover:bg-gray-100'
@@ -203,7 +203,7 @@ export const InventoryTable: React.FC = () => {
               setSelectedForReceive(null)
               setShowReceiveModal(true)
             }}
-            className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
+            className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
           >
             <PackagePlus size={15} /> Receive Stock
           </button>
@@ -232,7 +232,7 @@ export const InventoryTable: React.FC = () => {
                 <Layers size={20} />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-500">Total SKUs</div>
+                <div className="text-[10px] font-bold text-gray-500">Total SKUs</div>
                 <div className="text-xl font-black text-black">{totalSkus}</div>
               </div>
             </div>
@@ -242,7 +242,7 @@ export const InventoryTable: React.FC = () => {
                 <Package size={20} />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-500">Total Stock</div>
+                <div className="text-[10px] font-bold text-gray-500">Total Stock</div>
                 <div className="text-xl font-black text-emerald-700">{totalUnits} Units</div>
               </div>
             </div>
@@ -252,7 +252,7 @@ export const InventoryTable: React.FC = () => {
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-500">Low Stock (≤5)</div>
+                <div className="text-[10px] font-bold text-gray-500">Low Stock Items</div>
                 <div className="text-xl font-black text-amber-700">{lowStockCount}</div>
               </div>
             </div>
@@ -262,7 +262,7 @@ export const InventoryTable: React.FC = () => {
                 ₹
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-500">Stock Valuation</div>
+                <div className="text-[10px] font-bold text-gray-500">Stock Valuation</div>
                 <div className="text-lg font-black text-[#0A0A0A]">{formatCurrency(totalValuation)}</div>
               </div>
             </div>
@@ -287,7 +287,7 @@ export const InventoryTable: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFilterStatus('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   filterStatus === 'all'
                     ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -298,7 +298,7 @@ export const InventoryTable: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFilterStatus('in_stock')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   filterStatus === 'in_stock'
                     ? 'bg-emerald-800 text-white shadow-xs'
                     : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
@@ -309,7 +309,7 @@ export const InventoryTable: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFilterStatus('low')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   filterStatus === 'low'
                     ? 'bg-amber-800 text-white shadow-xs'
                     : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
@@ -320,7 +320,7 @@ export const InventoryTable: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFilterStatus('out')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   filterStatus === 'out'
                     ? 'bg-red-800 text-white shadow-xs'
                     : 'bg-red-50 text-red-800 border border-red-200 hover:bg-red-100'
@@ -353,7 +353,7 @@ export const InventoryTable: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#FBFAF6] border-b border-gray-200 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                  <thead className="bg-[#FBFAF6] border-b border-gray-200 text-xs font-bold text-gray-700">
                     <tr>
                       <th className="p-3.5">Product &amp; Variant SKU</th>
                       <th className="p-3.5">Barcode</th>
