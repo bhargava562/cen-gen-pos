@@ -66,7 +66,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-[#FBFAF6]">
           <div className="flex items-center gap-2">
             <Tag size={18} className="text-[#D4AF37]" />
-            <h3 className="text-sm font-black uppercase tracking-wider text-[#0A0A0A]">
+            <h3 className="text-sm font-bold text-[#0A0A0A]">
               Record Expense
             </h3>
           </div>
@@ -90,7 +90,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Date Picker */}
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+            <label className="block text-[11px] font-bold text-gray-700 mb-1">
               Date <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -107,7 +107,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Category Dropdown */}
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+            <label className="block text-[11px] font-bold text-gray-700 mb-1">
               Category <span className="text-red-500">*</span>
             </label>
             <select
@@ -125,11 +125,11 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Amount (₹) */}
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+            <label className="block text-[11px] font-bold text-gray-700 mb-1">
               Amount (₹) <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-sm text-[#0A0A0A]">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm text-[#0A0A0A]">
                 ₹
               </span>
               <input
@@ -140,14 +140,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-11 pl-8 pr-3 rounded-xl border border-gray-300 bg-[#FAFAFA] text-sm font-black text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full h-11 pl-8 pr-3 rounded-xl border border-gray-300 bg-[#FAFAFA] text-sm font-bold text-gray-900 outline-none focus:border-[#0A0A0A] focus:bg-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+            <label className="block text-[11px] font-bold text-gray-700 mb-1">
               Description / Notes
             </label>
             <textarea
@@ -164,14 +164,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-11 rounded-xl border border-gray-300 text-xs font-black uppercase tracking-wider text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              className="flex-1 h-11 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-[1.5] h-11 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="flex-[1.5] h-11 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-bold hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Expense'}
             </button>

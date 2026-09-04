@@ -2217,7 +2217,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                   {[
                     {
-                      label: 'TOTAL REVENUE',
+                      label: 'Total Revenue',
                       helper: 'POS + manual sales combined',
                       value: formatCurrency(analytics.totalCompletedRevenue),
                       icon: <RMIcon size={16} />,
@@ -2225,7 +2225,7 @@ export default function Dashboard() {
                       bg: 'bg-emerald-50',
                     },
                     {
-                      label: analytics.isProfitable ? 'NET PROFIT' : 'NET LOSS',
+                      label: analytics.isProfitable ? 'Net Profit' : 'Net Loss',
                       helper: `Revenue (${formatCurrency(analytics.totalCompletedRevenue)}) − Expenses (${formatCurrency(analytics.totalExpenses)})`,
                       value: formatCurrency(Math.abs(analytics.netProfit)),
                       icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
@@ -2235,7 +2235,7 @@ export default function Dashboard() {
                       arrow: analytics.isProfitable ? '↑' : '↓',
                     },
                     {
-                      label: 'TOTAL EXPENSES',
+                      label: 'Total Expenses',
                       helper: 'Overheads from expense tracker',
                       value: formatCurrency(analytics.totalExpenses),
                       icon: <Receipt size={16} />,
@@ -2243,7 +2243,7 @@ export default function Dashboard() {
                       bg: 'bg-amber-50',
                     },
                     {
-                      label: 'COMPLETED BILLS',
+                      label: 'Completed Bills',
                       helper: 'POS + manual bills',
                       value: String(analytics.completedOrders),
                       icon: <Trophy size={16} />,
@@ -2251,7 +2251,7 @@ export default function Dashboard() {
                       bg: 'bg-emerald-50',
                     },
                     {
-                      label: 'OFFLINE REVENUE',
+                      label: 'Offline Revenue',
                       helper: 'Walk-in POS sales',
                       value: formatCurrency(analytics.posRevenue),
                       icon: <RMIcon size={16} />,
@@ -2259,7 +2259,7 @@ export default function Dashboard() {
                       bg: 'bg-cyan-50',
                     },
                     {
-                      label: 'TOTAL OFFLINE BILLS',
+                      label: 'Total Offline Bills',
                       helper: 'Walk-in POS orders',
                       value: String(analytics.offlineOrderCount),
                       icon: <LayoutDashboard size={16} />,
@@ -2267,7 +2267,7 @@ export default function Dashboard() {
                       bg: 'bg-red-50',
                     },
                     {
-                      label: 'TOTAL ONLINE BILLS',
+                      label: 'Total Online Bills',
                       helper: 'Live completed online bills',
                       value: String(analytics.onlineBillCount),
                       icon: <Box size={16} />,
@@ -2275,7 +2275,7 @@ export default function Dashboard() {
                       bg: 'bg-blue-50',
                     },
                     {
-                      label: 'TOTAL ITEMS SOLD',
+                      label: 'Total Items Sold',
                       helper: 'From completed bills',
                       value: String(Math.round(analytics.totalProductsSold)),
                       icon: <Box size={16} />,
@@ -2283,7 +2283,7 @@ export default function Dashboard() {
                       bg: 'bg-purple-50',
                     },
                     {
-                      label: 'AVERAGE REVENUE PER BILL',
+                      label: 'Average Revenue Per Bill',
                       helper: 'Average per bill',
                       value: formatCurrency(analytics.averageRevenuePerBill),
                       icon: <RMIcon size={16} />,
@@ -2291,7 +2291,7 @@ export default function Dashboard() {
                       bg: 'bg-emerald-50',
                     },
                     {
-                      label: 'TOP PRODUCT',
+                      label: 'Top Product',
                       helper: 'Most sold item',
                       value: analytics.bestProduct || 'No sales yet',
                       icon: <Trophy size={16} />,
@@ -2302,7 +2302,7 @@ export default function Dashboard() {
                     <div key={index} className="bg-white rounded-card border border-borderLight p-5 sm:p-5 shadow-soft flex flex-col justify-between hover:shadow-md transition-shadow">
                       <div>
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <p className="text-[11px] font-bold text-[#111111] uppercase tracking-wider">{card.label}</p>
+                          <p className="text-[11px] font-bold text-[#111111]">{card.label}</p>
                           <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center ${card.color} shrink-0`}>{card.icon}</div>
                         </div>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">

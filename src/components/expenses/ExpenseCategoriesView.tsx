@@ -77,14 +77,14 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
         <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-xs space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <Tag size={16} className="text-[#D4AF37]" />
-            <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
+            <h4 className="text-xs font-bold text-gray-800">
               Add Category
             </h4>
           </div>
 
           <form onSubmit={handleAddCategory} className="space-y-4">
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-gray-700 mb-1">
+              <label className="block text-[11px] font-bold text-gray-700 mb-1">
                 Category Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -100,7 +100,7 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
             <button
               type="submit"
               disabled={loading || !newCatName.trim()}
-              className="w-full h-11 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full h-11 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-bold hover:bg-[#1A1A1A] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Plus size={14} /> {loading ? 'Adding...' : 'Add Category'}
             </button>
@@ -110,7 +110,7 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
         {/* RIGHT COLUMN: Categories Table Card */}
         <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
           <div className="p-5 border-b border-gray-100 bg-[#FAFAFA] flex items-center justify-between">
-            <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
+            <h4 className="text-xs font-bold text-gray-800">
               Expense Categories ({categories.length})
             </h4>
           </div>
@@ -119,13 +119,13 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 bg-[#FBFAF6]">
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                  <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600">
                     Category Name
                   </th>
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                  <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600">
                     Status
                   </th>
-                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600 text-right">
+                  <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600 text-right">
                     Actions
                   </th>
                 </tr>
@@ -144,7 +144,7 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
                         {cat.name}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                           Active
                         </span>
                       </td>

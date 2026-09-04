@@ -166,7 +166,7 @@ export const ExpensesView: React.FC = () => {
       {/* Top Header & Tab Pills */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
-          <h2 className="text-xl font-black uppercase tracking-wider text-[#0A0A0A] flex items-center gap-2">
+          <h2 className="text-xl font-bold tracking-tight text-[#0A0A0A] flex items-center gap-2">
             <Receipt size={22} className="text-[#D4AF37]" />
             Expense Tracker
           </h2>
@@ -180,7 +180,7 @@ export const ExpensesView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('expenses')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'expenses'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-700 hover:text-black'
@@ -191,7 +191,7 @@ export const ExpensesView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'categories'
                 ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-sm'
                 : 'text-gray-700 hover:text-black'
@@ -226,7 +226,7 @@ export const ExpensesView: React.FC = () => {
                 className="bg-white border border-gray-200/80 rounded-2xl p-4 shadow-xs flex flex-col justify-between hover:border-[#D4AF37]/50 transition-all group"
               >
                 <div className="flex items-center justify-between gap-1 mb-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+                  <span className="text-[11px] font-bold text-gray-500">
                     {kpi.label}
                   </span>
                   <div className="w-6 h-6 rounded-lg bg-[#FBFAF6] border border-[#E8D399]/60 flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition-transform">
@@ -281,7 +281,7 @@ export const ExpensesView: React.FC = () => {
                       key={p}
                       type="button"
                       onClick={() => applyDatePreset(p)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                         activePreset === p
                           ? 'bg-[#0A0A0A] text-[#D4AF37] shadow-xs'
                           : 'text-gray-600 hover:text-black'
@@ -308,14 +308,14 @@ export const ExpensesView: React.FC = () => {
                   type="button"
                   onClick={() => exportExpensesToCSV(filteredExpenses)}
                   disabled={filteredExpenses.length === 0}
-                  className="h-10 px-4 rounded-xl border border-gray-300 bg-white text-xs font-black uppercase tracking-wider text-gray-800 hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-40"
+                  className="h-10 px-4 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-800 hover:bg-gray-100 transition-all flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-40"
                 >
                   <Download size={14} /> Export CSV
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsRecordModalOpen(true)}
-                  className="h-10 px-4 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black uppercase tracking-wider hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                  className="h-10 px-4 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-bold hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer"
                 >
                   <Plus size={15} /> Record Expense
                 </button>
@@ -384,7 +384,7 @@ export const ExpensesView: React.FC = () => {
           {/* Expenses Table */}
           <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-xs">
             <div className="p-5 border-b border-gray-100 bg-[#FAFAFA] flex items-center justify-between">
-              <h4 className="text-xs font-black uppercase tracking-wider text-gray-800">
+              <h4 className="text-xs font-bold text-gray-800">
                 Expense Records ({filteredExpenses.length})
               </h4>
               {selectedCategoryId !== 'all' && (
@@ -401,19 +401,19 @@ export const ExpensesView: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 bg-[#FBFAF6]">
-                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600">
                       Date
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600">
                       Category
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600">
                       Description
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600 text-right">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600 text-right">
                       Amount (₹)
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-wider text-gray-600 text-right">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-gray-600 text-right">
                       Actions
                     </th>
                   </tr>
@@ -440,7 +440,7 @@ export const ExpensesView: React.FC = () => {
                           {exp.expense_date}
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#FBFAF6] text-[#0A0A0A] border border-[#E8D399]">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#FBFAF6] text-[#0A0A0A] border border-[#E8D399]">
                             {exp.category_name}
                           </span>
                         </td>
