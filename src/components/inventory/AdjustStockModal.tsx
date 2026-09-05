@@ -1,5 +1,15 @@
-import React, { useState } from 'react'
-import { X, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import {
+  X,
+  SlidersHorizontal,
+  AlertCircle,
+  CheckCircle2,
+  PlusCircle,
+  MinusCircle,
+  Target,
+  ArrowRight,
+  Package,
+} from 'lucide-react'
 import { inventoryService, type InventoryStockItem } from '../../services/inventoryService'
 import { BRAND_EN } from '../../lib/brand'
 
@@ -10,29 +20,90 @@ export interface AdjustStockModalProps {
   onSuccess?: () => void
 }
 
+type AdjustMode = 'RESTOCK' | 'REMOVE' | 'CORRECTION'
+type RemoveReason = 'DAMAGE' | 'RETURN' | 'CORRECTION'
+
 export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   isOpen,
   onClose,
   item,
   onSuccess,
 }) => {
-  const [newQuantity, setNewQuantity] = useState<number>(item ? item.stock : 0)
-  const [reason, setReason] = useState<'RESTOCK' | 'DAMAGE' | 'CORRECTION' | 'RETURN'>('CORRECTION')
+  const [mode, setMode] = useState<AdjustMode>('RESTOCK')
+  const [addQuantity, setAddQuantity] = useState<number>(1)
+  const [removeQuantity, setRemoveQuantity] = useState<number>(1)
+  const [removeReason, setRemoveReason] = useState<RemoveReason>('DAMAGE')
+  const [correctedQuantity, setCorrectedQuantity] = useState<number>(0)
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (item && isOpen) {
+      setMode('RESTOCK')
+      setAddQuantity(1)
+      setRemoveQuantity(Math.min(1, Math.max(1, item.stock)))
+      setRemoveReason('DAMAGE')
+      setCorrectedQuantity(item.stock)
+      setNote('')
+      setError('')
+    }
+  }, [item, isOpen])
+
   if (!isOpen || !item) return null
 
   const currentStock = item.stock
-  const delta = newQuantity - currentStock
+
+  // Calculate effective new total stock and delta based on active mode
+  let effectiveNewStock = currentStock
+  let delta = 0
+  let effectiveReason: 'RESTOCK' | 'DAMAGE' | 'CORRECTION' | 'RETURN' = 'RESTOCK'
+
+  if (mode === 'RESTOCK') {
+    effectiveNewStock = currentStock + Math.max(0, addQuantity)
+    delta = addQuantity
+    effectiveReason = 'RESTOCK'
+  } else if (mode === 'REMOVE') {
+    effectiveNewStock = Math.max(0, currentStock - Math.max(0, removeQuantity))
+    delta = -Math.min(currentStock, Math.max(0, removeQuantity))
+    effectiveReason = removeReason
+  } else {
+    effectiveNewStock = Math.max(0, correctedQuantity)
+    delta = effectiveNewStock - currentStock
+    effectiveReason = 'CORRECTION'
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (newQuantity < 0) {
-      setError('Stock quantity cannot be negative')
+    if (mode === 'RESTOCK' && addQuantity <= 0) {
+      setError('Please enter a valid quantity to add (minimum 1 unit)')
+      return
+    }
+
+    if (mode === 'REMOVE') {
+      if (removeQuantity <= 0) {
+        setError('Please enter a valid quantity to remove (minimum 1 unit)')
+        return
+      }
+      if (currentStock <= 0) {
+        setError('Current stock is 0. Cannot remove units from an empty stock.')
+        return
+      }
+      if (removeQuantity > currentStock) {
+        setError(`Cannot remove ${removeQuantity} units. Maximum available stock to remove is ${currentStock}.`)
+        return
+      }
+    }
+
+    if (mode === 'CORRECTION' && correctedQuantity < 0) {
+      setError('Reconciled stock quantity cannot be negative.')
+      return
+    }
+
+    if (delta === 0) {
+      setError('No stock change detected. Please adjust the quantity.')
       return
     }
 
@@ -42,8 +113,8 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
       await inventoryService.adjustStock({
         product_id: item.product_id,
         variant_id: item.variant_id || null,
-        new_quantity: newQuantity,
-        reason: reason,
+        new_quantity: effectiveNewStock,
+        reason: effectiveReason,
         note: note.trim() || undefined,
         created_by_name: 'Admin',
       })
@@ -59,7 +130,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-lg w-full border border-[#E8D399] shadow-2xl overflow-hidden flex flex-col my-8 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-[#0A0A0A] px-6 py-4 border-b border-[#D4AF37]/30 flex items-center justify-between text-white">
@@ -72,11 +143,12 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
                 Adjust Inventory Stock ({BRAND_EN})
               </h2>
               <p className="text-xs text-[#D4AF37] font-semibold">
-                Audit-tracked stock correction &amp; damage logging
+                Restock, Remove stock or Reconcile physical count
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
           >
@@ -88,100 +160,338 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2">
-              <AlertCircle size={15} />
-              {error}
+              <AlertCircle size={15} className="shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Item details card */}
-          <div className="bg-[#FBFAF6] border border-[#E8D399] rounded-2xl p-3.5">
-            <div className="text-[10px] font-black uppercase tracking-wider text-[#B48811]">
-              Target SKU
+          {/* Target SKU card */}
+          <div className="bg-[#FBFAF6] border border-[#E8D399] rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-[#B48811] flex items-center gap-1">
+                  <Package size={12} /> Target SKU / Product
+                </div>
+                <div className="text-sm font-black text-black mt-0.5">{item.name}</div>
+                {item.variant_name && (
+                  <div className="mt-1 inline-block text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                    Variant: {item.variant_name}
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Current Stock</span>
+                <span className="text-lg font-black text-black">{currentStock}</span>
+                <span className="text-xs font-bold text-gray-600 ml-1">units</span>
+              </div>
             </div>
-            <div className="text-sm font-black text-black">{item.name}</div>
-            {item.variant_name && (
-              <div className="mt-1 inline-block text-xs font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
-                Variant: {item.variant_name}
+            {item.barcode && (
+              <div className="mt-2 pt-2 border-t border-[#E8D399]/40 flex items-center gap-2 text-xs font-semibold text-gray-600">
+                <span>Barcode:</span>
+                <strong className="font-mono text-black bg-white px-2 py-0.5 rounded border border-gray-200">{item.barcode}</strong>
               </div>
             )}
-            <div className="mt-2 flex items-center gap-4 text-xs font-semibold text-gray-600">
-              <span>Current Stock: <strong className="text-black text-sm">{currentStock}</strong></span>
-              {item.barcode && <span>Barcode: <strong className="font-mono text-black">{item.barcode}</strong></span>}
-            </div>
           </div>
 
-          {/* Reason picker */}
+          {/* Action Mode Selector Tabs */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-1.5">
-              Adjustment Reason <span className="text-red-500">*</span>
+            <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-2">
+              Select Adjustment Type <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(['RESTOCK', 'DAMAGE', 'CORRECTION', 'RETURN'] as const).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setReason(r)}
-                  className={`py-2 px-2 rounded-xl text-xs font-black border transition-all ${
-                    reason === r
-                      ? 'bg-[#0A0A0A] text-[#D4AF37] border-[#D4AF37] shadow-sm'
-                      : 'bg-[#FBFAF6] text-gray-700 border-gray-200 hover:bg-gray-100'
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* New Stock Input */}
-          <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-gray-700 mb-1.5">
-              New Total Stock Quantity <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-3 gap-2">
+              {/* RESTOCK TAB */}
               <button
                 type="button"
-                onClick={() => setNewQuantity((q) => Math.max(0, q - 1))}
-                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-black font-black text-lg flex items-center justify-center border border-gray-300"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min="0"
-                value={newQuantity}
-                onChange={(e) => setNewQuantity(Math.max(0, parseInt(e.target.value) || 0))}
-                required
-                className="flex-1 text-center font-black text-xl py-2.5 rounded-xl border-2 border-[#E8D399] bg-[#FBFAF6] focus:border-[#0A0A0A] focus:bg-white outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setNewQuantity((q) => q + 1)}
-                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-black font-black text-lg flex items-center justify-center border border-gray-300"
-              >
-                +
-              </button>
-            </div>
-            <div className="flex items-center justify-between text-xs font-bold mt-1.5 px-1">
-              <span className="text-gray-500">Difference (Delta):</span>
-              <span
-                className={`font-black ${
-                  delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-rose-600' : 'text-gray-500'
+                onClick={() => { setMode('RESTOCK'); setError('') }}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                  mode === 'RESTOCK'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-sm ring-2 ring-emerald-500/20'
+                    : 'bg-[#FBFAF6] border-gray-200 text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {delta > 0 ? `+${delta}` : delta} Units
-              </span>
+                <PlusCircle size={20} className={mode === 'RESTOCK' ? 'text-emerald-600' : 'text-gray-400'} />
+                <span className="text-xs font-black mt-1">Restock</span>
+                <span className="text-[10px] font-semibold text-gray-500">+ Add Units</span>
+              </button>
+
+              {/* REMOVE TAB */}
+              <button
+                type="button"
+                onClick={() => { setMode('REMOVE'); setError('') }}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                  mode === 'REMOVE'
+                    ? 'bg-rose-50 border-rose-500 text-rose-900 shadow-sm ring-2 ring-rose-500/20'
+                    : 'bg-[#FBFAF6] border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <MinusCircle size={20} className={mode === 'REMOVE' ? 'text-rose-600' : 'text-gray-400'} />
+                <span className="text-xs font-black mt-1">Remove Stock</span>
+                <span className="text-[10px] font-semibold text-gray-500">- Deduct Units</span>
+              </button>
+
+              {/* RECONCILE TAB */}
+              <button
+                type="button"
+                onClick={() => { setMode('CORRECTION'); setError('') }}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                  mode === 'CORRECTION'
+                    ? 'bg-amber-50 border-[#D4AF37] text-amber-950 shadow-sm ring-2 ring-[#D4AF37]/30'
+                    : 'bg-[#FBFAF6] border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Target size={20} className={mode === 'CORRECTION' ? 'text-[#D4AF37]' : 'text-gray-400'} />
+                <span className="text-xs font-black mt-1">Reconciliation</span>
+                <span className="text-[10px] font-semibold text-gray-500">Set Exact Count</span>
+              </button>
             </div>
           </div>
 
-          {/* Note */}
+          {/* MODE 1: RESTOCK INPUT */}
+          {mode === 'RESTOCK' && (
+            <div className="space-y-3 bg-emerald-50/50 border border-emerald-200 p-4 rounded-2xl">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-emerald-900 mb-1.5">
+                  Quantity to Add (Restock) <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAddQuantity((q) => Math.max(1, q - 1))}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-emerald-100 text-emerald-900 font-black text-xl flex items-center justify-center border border-emerald-300 transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    value={addQuantity}
+                    onChange={(e) => setAddQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                    required
+                    className="flex-1 text-center font-black text-2xl py-2 rounded-xl border-2 border-emerald-400 bg-white text-emerald-950 focus:border-emerald-600 outline-none shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAddQuantity((q) => q + 1)}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-emerald-100 text-emerald-900 font-black text-xl flex items-center justify-center border border-emerald-300 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold text-emerald-800 mr-1">Quick Add:</span>
+                {[1, 5, 10, 25, 50, 100].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAddQuantity(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      addQuantity === preset
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                  >
+                    +{preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MODE 2: REMOVE STOCK INPUT */}
+          {mode === 'REMOVE' && (
+            <div className="space-y-3 bg-rose-50/50 border border-rose-200 p-4 rounded-2xl">
+              {/* Removal Reason Sub-picker */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-rose-900 mb-1.5">
+                  Removal Reason <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRemoveReason('DAMAGE')}
+                    className={`py-2 px-2 rounded-xl text-xs font-black border transition-all ${
+                      removeReason === 'DAMAGE'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                        : 'bg-white text-rose-900 border-rose-200 hover:bg-rose-100'
+                    }`}
+                  >
+                    Damaged / Defect
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemoveReason('RETURN')}
+                    className={`py-2 px-2 rounded-xl text-xs font-black border transition-all ${
+                      removeReason === 'RETURN'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                        : 'bg-white text-rose-900 border-rose-200 hover:bg-rose-100'
+                    }`}
+                  >
+                    Vendor Return
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemoveReason('CORRECTION')}
+                    className={`py-2 px-2 rounded-xl text-xs font-black border transition-all ${
+                      removeReason === 'CORRECTION'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                        : 'bg-white text-rose-900 border-rose-200 hover:bg-rose-100'
+                    }`}
+                  >
+                    Lost / Shrinkage
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-rose-900">
+                    Quantity to Remove <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[11px] font-bold text-rose-700">
+                    Max: {currentStock} units
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRemoveQuantity((q) => Math.max(1, q - 1))}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-rose-100 text-rose-900 font-black text-xl flex items-center justify-center border border-rose-300 transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={currentStock}
+                    value={removeQuantity}
+                    onChange={(e) => setRemoveQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                    required
+                    className="flex-1 text-center font-black text-2xl py-2 rounded-xl border-2 border-rose-400 bg-white text-rose-950 focus:border-rose-600 outline-none shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setRemoveQuantity((q) => Math.min(currentStock, q + 1))}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-rose-100 text-rose-900 font-black text-xl flex items-center justify-center border border-rose-300 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold text-rose-800 mr-1">Quick Remove:</span>
+                {[1, 2, 5, 10].filter((p) => p <= currentStock).map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRemoveQuantity(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                      removeQuantity === preset
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-white text-rose-900 border-rose-200 hover:bg-rose-100'
+                    }`}
+                  >
+                    -{preset}
+                  </button>
+                ))}
+                {currentStock > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveQuantity(currentStock)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-black border bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200"
+                  >
+                    Clear All ({currentStock})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MODE 3: RECONCILIATION COUNT INPUT */}
+          {mode === 'CORRECTION' && (
+            <div className="space-y-3 bg-amber-50/50 border border-[#E8D399] p-4 rounded-2xl">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-amber-950 mb-1.5">
+                  Actual Audited Physical Count <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCorrectedQuantity((q) => Math.max(0, q - 1))}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-amber-100 text-amber-950 font-black text-xl flex items-center justify-center border border-amber-300 transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={correctedQuantity}
+                    onChange={(e) => setCorrectedQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                    required
+                    className="flex-1 text-center font-black text-2xl py-2 rounded-xl border-2 border-[#D4AF37] bg-white text-black focus:border-black outline-none shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCorrectedQuantity((q) => q + 1)}
+                    className="w-11 h-11 rounded-xl bg-white hover:bg-amber-100 text-amber-950 font-black text-xl flex items-center justify-center border border-amber-300 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Real-time Math Preview Banner */}
+          <div className="bg-[#FBFAF6] border border-[#E8D399] rounded-2xl p-3.5 flex items-center justify-between text-xs font-bold">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Current:</span>
+              <span className="text-black font-black text-sm">{currentStock}</span>
+              <ArrowRight size={14} className="text-gray-400" />
+              <span className="text-gray-500">New Stock:</span>
+              <span
+                className={`text-base font-black ${
+                  effectiveNewStock > currentStock
+                    ? 'text-emerald-700'
+                    : effectiveNewStock < currentStock
+                    ? 'text-rose-700'
+                    : 'text-gray-700'
+                }`}
+              >
+                {effectiveNewStock} units
+              </span>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-black ${
+                delta > 0
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : delta < 0
+                  ? 'bg-rose-100 text-rose-800'
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {delta > 0 ? `+${delta}` : delta}
+            </span>
+          </div>
+
+          {/* Note Input */}
           <div>
             <label className="block text-xs font-bold text-gray-600 mb-1">
-              Adjustment Note / Reason Description
+              Adjustment Note / Reason Description (Optional)
             </label>
             <input
               type="text"
-              placeholder="e.g. Broken packaging, stock count reconciliation"
+              placeholder={
+                mode === 'RESTOCK'
+                  ? 'e.g. Received new stock shipment / batch delivery'
+                  : mode === 'REMOVE'
+                  ? 'e.g. Broken packaging, water damage, supplier return'
+                  : 'e.g. Physical inventory count reconciliation'
+              }
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="w-full py-2.5 px-3 rounded-xl border border-gray-300 bg-white text-xs text-gray-900 outline-none focus:border-[#0A0A0A]"
@@ -193,24 +503,34 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
+              className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || delta === 0}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] font-black hover:bg-[#1A1A1A] transition-all shadow-md disabled:opacity-50 cursor-pointer"
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black transition-all shadow-md disabled:opacity-50 cursor-pointer ${
+                mode === 'RESTOCK'
+                  ? 'bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] hover:bg-[#1A1A1A]'
+                  : mode === 'REMOVE'
+                  ? 'bg-rose-700 text-white hover:bg-rose-800 border border-rose-800'
+                  : 'bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] hover:bg-[#1A1A1A]'
+              }`}
             >
               {submitting ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                   Saving...
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={16} />
-                  Confirm Stock Adjustment
+                  {mode === 'RESTOCK'
+                    ? `Confirm Restock (+${addQuantity} Units)`
+                    : mode === 'REMOVE'
+                    ? `Confirm Removal (-${removeQuantity} Units)`
+                    : `Confirm Reconciliation (${effectiveNewStock} Units)`}
                 </>
               )}
             </button>

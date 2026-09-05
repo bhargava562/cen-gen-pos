@@ -51,6 +51,7 @@ import Pos from './Pos'
 import AdvanceOrders from './AdvanceOrders'
 import type { AdvanceOrder } from '../services/advanceOrderService'
 import { InventoryTable } from '../components/inventory/InventoryTable'
+import { CategoryManagerView } from '../components/inventory/CategoryManagerView'
 import { ExpensesView } from '../components/expenses/ExpensesView'
 import { expenseService, type ExpenseRecord } from '../services/expenseService'
 import { BRAND_EN } from '../lib/brand'
@@ -1495,7 +1496,6 @@ export default function Dashboard() {
         { id: 'inventory',      icon: <Layers size={18} />,       label: 'Inventory & Barcodes' },
         { id: 'advance_orders', icon: <FileText size={18} />,     label: 'Advance Orders' },
         { id: 'expenses',       icon: <Receipt size={18} />,      label: 'Expenses' },
-        { id: 'categories',     icon: <Package size={18} />,      label: 'Categories' },
         { id: 'history',        icon: <List size={18} />,         label: 'Order History' },
         { id: 'pos_analytics',  icon: <BarChart2 size={18} />,    label: 'Analytics Dashboard' },
         { id: 'coupons',        icon: <Box size={18} />,          label: 'Coupons' },
@@ -3632,49 +3632,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── CATEGORIES TAB ── */}
+        {/* ── CATEGORIES TAB (Unified Taxonomy Manager) ── */}
         {tab === 'categories' && (
-          <div className="w-full max-w-3xl space-y-6">
-            <div className="bg-white rounded-2xl border border-borderLight p-4 sm:p-6 shadow-sm">
-              <h3 className="text-[18px] font-black text-[#111111] mb-5">{l('Product Categories', 'பொருள் வகைகள்')}</h3>
-              {categoryNotice && (
-                <div className={`mb-4 rounded-xl px-3 py-2.5 text-[12px] font-bold ${categoryNotice.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  {categoryNotice.text}
-                </div>
-              )}
-              <form onSubmit={onAddCat} className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,0.45fr)_auto]">
-                <input className="min-w-0 w-full px-4 py-3 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-[#D4AF37] outline-none rounded-xl text-[13px] font-bold transition-colors shadow-sm"
-                  placeholder={l('Category name (English)', 'வகை பெயர் (English)')} value={newCat.name_en}
-                  onChange={e => setNewCat(c => ({...c, name_en: e.target.value}))} />
-                <input className="min-w-0 w-full px-4 py-3 bg-[#FAFAFA] border border-[#F3F4F6] focus:border-[#D4AF37] outline-none rounded-xl text-[13px] font-bold transition-colors shadow-sm"
-                  placeholder={l('Tamil', 'தமிழ்')} value={newCat.name_ta}
-                  onChange={e => setNewCat(c => ({...c, name_ta: e.target.value}))} />
-                <button type="submit" className="px-5 py-3 bg-[#111111] hover:bg-[#333333] transition-colors shadow-sm text-white font-black rounded-xl text-[13px]">{editingCategoryId === null ? l('Add', 'சேர்') : 'Save'}</button>
-                {editingCategoryId !== null && (
-                  <button type="button" onClick={() => { setEditingCategoryId(null); setNewCat({ name_en: '', name_ta: '' }) }} className="px-3 py-3 text-[#6B7280] font-black rounded-xl text-[12px] hover:bg-[#F3F4F6]">Cancel</button>
-                )}
-              </form>
-              <div className="space-y-3">
-                {cats.map(c => (
-                  <div key={c.id} className="flex flex-col gap-3 p-4 bg-white border border-[#F3F4F6] shadow-sm rounded-xl transition-colors hover:border-[#D1D5DB] sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-bold text-[#111111]">{c.name_en}</p>
-                      <p className="text-[12px] text-[#6B7280]">{c.name_ta}</p>
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${c.is_active ? 'text-green-600' : 'text-red-500'}`}>
-                        {c.is_active ? 'Active' : l('Inactive', 'நிறுத்தம்')}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0">
-                      <button onClick={() => { setEditingCategoryId(c.id); setNewCat({ name_en: c.name_en, name_ta: c.name_ta || '' }); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="p-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg" title="Edit category"><Edit2 size={16} /></button>
-                      <button onClick={() => void moveCat(c, 'up')} className="p-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg"><ArrowUp size={16} /></button>
-                      <button onClick={() => void moveCat(c, 'down')} className="p-2 text-[#6B7280] hover:text-[#111111] hover:bg-[#F3F4F6] transition-colors rounded-lg"><ArrowDown size={16} /></button>
-                      <button onClick={() => void toggleCat(c)} className={`p-2 rounded-lg transition-colors ${c.is_active ? 'text-amber-500 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'}`}><Power size={16} /></button>
-                      <button onClick={() => void deleteCat(c)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors rounded-lg"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="w-full space-y-6">
+            <CategoryManagerView />
           </div>
         )}
 
