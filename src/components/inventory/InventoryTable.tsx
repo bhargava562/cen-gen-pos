@@ -13,6 +13,7 @@ import {
   PackagePlus,
   Box,
   Edit2,
+  Trash2,
 } from 'lucide-react'
 import { inventoryService, type InventoryStockItem } from '../../services/inventoryService'
 import { CreateBarcodeModal } from '../barcode/CreateBarcodeModal'
@@ -58,6 +59,24 @@ export const InventoryTable: React.FC = () => {
       setLoading(false)
     }
   }, [fetchProducts])
+
+  const handleDeleteItem = async (item: InventoryStockItem) => {
+    const itemLabel = item.variant_name ? `${item.name} (${item.variant_name})` : item.name
+    if (!window.confirm(`Are you sure you want to delete "${itemLabel}" from catalog & inventory?`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      await inventoryService.deleteInventoryItem(item.product_id, item.variant_id)
+      await fetchProducts(true)
+      await loadData()
+    } catch (err) {
+      console.error('Failed to delete inventory item:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete item')
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     void loadData()
@@ -466,6 +485,18 @@ export const InventoryTable: React.FC = () => {
                                 title="Print Barcode Labels"
                               >
                                 <Printer size={14} />
+                              </button>
+                            )}
+
+                            {/* Delete Product / Variant (Admin Only) */}
+                            {role === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item)}
+                                className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                                title={`Delete "${item.variant_name ? `${item.name} (${item.variant_name})` : item.name}"`}
+                              >
+                                <Trash2 size={14} />
                               </button>
                             )}
                           </div>

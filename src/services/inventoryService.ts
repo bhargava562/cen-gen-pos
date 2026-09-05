@@ -181,7 +181,41 @@ export const inventoryService = {
       }
     }
 
-    return items
+    return items.filter((i) => i.is_active !== false)
+  },
+
+  /**
+   * Deactivate / delete a product or variant from inventory and catalog.
+   */
+  async deleteInventoryItem(productId: number, variantId?: string | null): Promise<void> {
+    if (variantId) {
+      const { error: vErr } = await supabase
+        .from('product_variants')
+        .update({ is_active: false })
+        .eq('id', variantId)
+      if (vErr) throw vErr
+
+      await supabase
+        .from('barcode_registry')
+        .update({ is_active: false })
+        .eq('variant_id', variantId)
+    } else {
+      const { error: pErr } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', productId)
+      if (pErr) throw pErr
+
+      await supabase
+        .from('product_variants')
+        .update({ is_active: false })
+        .eq('product_id', productId)
+
+      await supabase
+        .from('barcode_registry')
+        .update({ is_active: false })
+        .eq('product_id', productId)
+    }
   },
 
   /**

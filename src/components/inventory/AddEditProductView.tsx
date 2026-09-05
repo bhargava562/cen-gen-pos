@@ -135,6 +135,26 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     )
   }
 
+  const handleDeleteProduct = async (id: number, prodName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${prodName}" from catalog & inventory?`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      await inventoryService.deleteInventoryItem(id)
+      await fetchProducts(true)
+      resetForm()
+      onStockUpdated?.()
+      setStatusMessage({ type: 'success', text: `Product "${prodName}" deleted successfully.` })
+    } catch (err) {
+      console.error('Failed to delete product:', err)
+      setStatusMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete product' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatusMessage(null)
@@ -537,7 +557,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               <div
                 key={p.id}
                 onClick={() => startEditProduct(p)}
-                className={`p-3.5 hover:bg-[#FBFAF6] cursor-pointer flex items-center justify-between transition-colors ${
+                className={`group p-3.5 hover:bg-[#FBFAF6] cursor-pointer flex items-center justify-between transition-colors ${
                   selectedProductId === Number(p.id) ? 'bg-[#FFF9E6] border-l-4 border-[#D4AF37]' : ''
                 }`}
               >
@@ -549,11 +569,24 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                     {p.category || 'General'} {p.hasVariants ? '• Multi-variant' : ''}
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="font-black text-xs text-gray-900">₹{p.price}</span>
-                  <span className="block text-[10px] text-emerald-700 font-bold">
-                    Stock: {p.stockQuantity ?? p.stock ?? 0}
-                  </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="text-right">
+                    <span className="font-black text-xs text-gray-900">₹{p.price}</span>
+                    <span className="block text-[10px] text-emerald-700 font-bold">
+                      Stock: {p.stockQuantity ?? p.stock ?? 0}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteProduct(Number(p.id), p.name)
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                    title={`Delete "${p.name}"`}
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             ))
@@ -575,13 +608,23 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             </p>
           </div>
           {selectedProductId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-            >
-              + Create Another
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleDeleteProduct(selectedProductId, name)}
+                className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 cursor-pointer"
+                title="Delete this product"
+              >
+                <Trash2 size={13} /> Delete Product
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+              >
+                + Create Another
+              </button>
+            </div>
           )}
         </div>
 
