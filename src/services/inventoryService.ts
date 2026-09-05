@@ -356,7 +356,7 @@ export const inventoryService = {
       .from('categories')
       .insert({
         name_en: payload.name_en.trim(),
-        name_ta: payload.name_ta?.trim() || null,
+        name_ta: payload.name_ta?.trim() || '',
         sort_order: payload.sort_order ?? 0,
         is_active: payload.is_active !== false,
       })
@@ -365,6 +365,9 @@ export const inventoryService = {
 
     if (error) {
       console.error('[inventoryService.createCategory] Error:', error)
+      if (error.code === '23505') {
+        throw new Error(`A category named "${payload.name_en.trim()}" already exists.`)
+      }
       throw error
     }
 
@@ -375,15 +378,24 @@ export const inventoryService = {
    * Update category.
    */
   async updateCategory(id: number, payload: Partial<{ name_en: string; name_ta?: string; sort_order?: number; is_active?: boolean }>): Promise<CategoryRecord> {
+    const updateData: Record<string, unknown> = {}
+    if (payload.name_en !== undefined) updateData.name_en = payload.name_en.trim()
+    if (payload.name_ta !== undefined) updateData.name_ta = payload.name_ta.trim() || ''
+    if (payload.sort_order !== undefined) updateData.sort_order = payload.sort_order
+    if (payload.is_active !== undefined) updateData.is_active = payload.is_active
+
     const { data, error } = await supabase
       .from('categories')
-      .update(payload)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
 
     if (error) {
       console.error('[inventoryService.updateCategory] Error:', error)
+      if (error.code === '23505') {
+        throw new Error(`A category named "${payload.name_en?.trim()}" already exists.`)
+      }
       throw error
     }
 

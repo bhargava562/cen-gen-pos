@@ -299,7 +299,7 @@ export const CategoryManagerView: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[560px] text-left text-xs">
                 <thead className="bg-[#FBFAF6] border-b border-gray-200 text-[10px] font-black uppercase tracking-wider text-gray-600">
                   <tr>
                     <th className="p-3 w-16 text-center">Order</th>

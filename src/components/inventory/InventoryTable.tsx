@@ -352,7 +352,7 @@ export const InventoryTable: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[620px] text-left text-xs">
                   <thead className="bg-[#FBFAF6] border-b border-gray-200 text-xs font-bold text-gray-700">
                     <tr>
                       <th className="p-3.5">Product &amp; Variant SKU</th>
