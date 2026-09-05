@@ -6,6 +6,7 @@ import {
   Check,
   Package,
   Tag,
+  Boxes,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useProductStore, type Product } from '../../store/store'
@@ -18,7 +19,7 @@ export interface VariantInputRow {
   sizeLabel?: string
   price: number
   costPrice: number
-  noOfLabels: number
+  stock: number
   customBarcode?: string
 }
 
@@ -34,6 +35,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
   const [categoryId, setCategoryId] = useState<number | ''>('')
   const [price, setPrice] = useState<string>('')
   const [purchasePrice, setPurchasePrice] = useState<string>('')
+  const [stockQuantity, setStockQuantity] = useState<string>('0')
   const [lowStockAlert, setLowStockAlert] = useState<string>('5')
   const [barcode, setBarcode] = useState<string>('')
   const [description, setDescription] = useState<string>('')
@@ -57,6 +59,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     setCategoryId('')
     setPrice('')
     setPurchasePrice('')
+    setStockQuantity('0')
     setLowStockAlert('5')
     setBarcode('')
     setDescription('')
@@ -72,6 +75,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
     setCategoryId(p.categoryId ? Number(p.categoryId) : '')
     setPrice(String(p.price || ''))
     setPurchasePrice(String(p.purchasePrice || ''))
+    setStockQuantity(String(p.stockQuantity ?? p.stock ?? 0))
     setLowStockAlert(p.lowStockAlert ? String(p.lowStockAlert) : '5')
     setBarcode(p.barcode || '')
     setDescription(p.description || '')
@@ -88,7 +92,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             sizeLabel: v.sizeLabel || v.variantName,
             price: v.price,
             costPrice: v.purchasePrice || 0,
-            noOfLabels: 0,
+            stock: v.stock || 0,
             customBarcode: v.barcode || '',
           }))
         )
@@ -111,7 +115,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
         sizeLabel: '',
         price: baseP,
         costPrice: baseC,
-        noOfLabels: 5,
+        stock: 0,
         customBarcode: '',
       },
     ])
@@ -141,7 +145,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
       return
     }
 
-    const firstVariant = variantRows.find(v => v.variantName.trim())
+    const firstVariant = variantRows.find((v) => v.variantName.trim())
     const priceNum = hasVariants && firstVariant ? (Number(firstVariant.price) || 0) : (parseFloat(price) || 0)
     const costNum = hasVariants && firstVariant ? (Number(firstVariant.costPrice) || 0) : (parseFloat(purchasePrice) || 0)
 
@@ -150,46 +154,97 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
       return
     }
 
-    if (hasVariants && (!variantRows.length || variantRows.some(v => !v.variantName.trim()))) {
+    if (hasVariants && (!variantRows.length || variantRows.some((v) => !v.variantName.trim()))) {
       setStatusMessage({ type: 'error', text: 'Please provide names for all added variants' })
       return
     }
+
+    const selectedCat = categories.find((c) => Number(c.id) === Number(categoryId))
+    const categoryName = selectedCat ? selectedCat.name_en : 'General'
+    const alertThreshold = Number(lowStockAlert) > 0 ? Number(lowStockAlert) : 5
 
     setLoading(true)
 
     try {
       if (selectedProductId) {
         // UPDATE EXISTING PRODUCT
-        const alertThreshold = Number(lowStockAlert) > 0 ? Number(lowStockAlert) : 5
-        const { error: updErr } = await supabase
-          .from('products')
-          .update({
-            name: trimmedName,
-            name_ta: nameTa.trim() || '',
-            category_id: categoryId ? Number(categoryId) : 1,
-            price: priceNum,
-            offer_price: priceNum,
-            purchase_price: costNum,
-            low_stock_alert: alertThreshold,
-            barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
-            description: description.trim() || '',
-            has_variants: hasVariants && variantRows.length > 0,
+        if (!hasVariants) {
+          const inputStock = Math.max(0, parseInt(stockQuantity) || 0)
+
+          // Check previous stock
+          const { data: currentProd } = await supabase
+            .from('products')
+            .select('stock_quantity, stock')
+            .eq('id', selectedProductId)
+            .single()
+
+          const prevStock = currentProd ? (currentProd.stock_quantity ?? currentProd.stock ?? 0) : 0
+          const delta = inputStock - prevStock
+
+          const { error: updErr } = await supabase
+            .from('products')
+            .update({
+              name: trimmedName,
+              name_ta: nameTa.trim() || '',
+              category: categoryName,
+              category_id: categoryId ? Number(categoryId) : 1,
+              price: priceNum,
+              offer_price: priceNum,
+              purchase_price: costNum,
+              low_stock_alert: alertThreshold,
+              barcode: barcode.trim() || null,
+              description: description.trim() || '',
+              has_variants: false,
+              stock_quantity: inputStock,
+              stock: inputStock,
+            })
+            .eq('id', selectedProductId)
+
+          if (updErr) throw updErr
+
+          if (delta !== 0) {
+            await supabase.from('inventory_movements').insert({
+              product_id: selectedProductId,
+              variant_id: null,
+              movement_type: delta > 0 ? 'RESTOCK' : 'CORRECTION',
+              quantity_delta: delta,
+              quantity_before: prevStock,
+              quantity_after: inputStock,
+              unit_cost: costNum || null,
+              reference_type: 'PRODUCT_UPDATE',
+              note: 'Stock updated in product editor',
+              created_by_name: 'Admin',
+            })
+          }
+
+          if (barcode.trim()) {
+            await supabase.from('barcode_registry').upsert(
+              {
+                barcode: barcode.trim(),
+                product_id: selectedProductId,
+                variant_id: null,
+                is_active: true,
+              },
+              { onConflict: 'barcode' }
+            )
+          }
+
+          setStatusMessage({
+            type: 'success',
+            text: `Product "${trimmedName}" updated successfully with ${inputStock} stock units! Ready in POS Catalog.`,
           })
-          .eq('id', selectedProductId)
-
-        if (updErr) throw updErr
-
-        // Process variant rows
-        if (hasVariants && variantRows.length > 0) {
+        } else {
+          // Multi-variant update
+          let totalVariantStock = 0
           for (const v of variantRows) {
             if (!v.variantName.trim()) continue
-
             const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
             const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
-            const vQty = Math.max(0, v.noOfLabels || 0)
+            const vStock = Math.max(0, Number(v.stock) || 0)
+            totalVariantStock += vStock
 
             if (v.id.startsWith('var_')) {
-              // Insert newly added variant
+              // Insert new variant
               const { data: createdVar, error: vErr } = await supabase
                 .from('product_variants')
                 .insert({
@@ -198,25 +253,38 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                   size_label: v.sizeLabel?.trim() || v.variantName.trim(),
                   price: vPrice,
                   purchase_price: vCost,
-                  stock: 0,
+                  stock: vStock,
+                  barcode: v.customBarcode?.trim() || null,
                   is_active: true,
                 })
                 .select()
                 .single()
 
-              if (!vErr && createdVar && vQty > 0) {
-                await supabase.rpc('create_barcode_and_receive_stock', {
-                  p_product_id: selectedProductId,
-                  p_variant_id: createdVar.id,
-                  p_quantity_received: vQty,
-                  p_unit_cost: vCost || null,
-                  p_created_by_name: 'Admin',
-                  p_custom_barcode: v.customBarcode?.trim() || null,
-                  p_note: `Added variant ${v.variantName.trim()}`,
+              if (!vErr && createdVar && vStock > 0) {
+                await supabase.from('inventory_movements').insert({
+                  product_id: selectedProductId,
+                  variant_id: createdVar.id,
+                  movement_type: 'RESTOCK',
+                  quantity_delta: vStock,
+                  quantity_before: 0,
+                  quantity_after: vStock,
+                  unit_cost: vCost || null,
+                  reference_type: 'PRODUCT_UPDATE',
+                  note: `Added variant ${v.variantName.trim()} with stock`,
+                  created_by_name: 'Admin',
                 })
               }
             } else {
               // Update existing variant
+              const { data: curVar } = await supabase
+                .from('product_variants')
+                .select('stock')
+                .eq('id', v.id)
+                .single()
+
+              const prevVarStock = curVar?.stock ?? 0
+              const varDelta = vStock - prevVarStock
+
               await supabase
                 .from('product_variants')
                 .update({
@@ -224,89 +292,200 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                   size_label: v.sizeLabel?.trim() || v.variantName.trim(),
                   price: vPrice,
                   purchase_price: vCost,
+                  stock: vStock,
+                  barcode: v.customBarcode?.trim() || null,
                 })
                 .eq('id', v.id)
 
-              if (vQty > 0) {
-                await supabase.rpc('create_barcode_and_receive_stock', {
-                  p_product_id: selectedProductId,
-                  p_variant_id: v.id,
-                  p_quantity_received: vQty,
-                  p_unit_cost: vCost || null,
-                  p_created_by_name: 'Admin',
-                  p_custom_barcode: v.customBarcode?.trim() || null,
-                  p_note: `Received stock for variant ${v.variantName.trim()}`,
+              if (varDelta !== 0) {
+                await supabase.from('inventory_movements').insert({
+                  product_id: selectedProductId,
+                  variant_id: v.id,
+                  movement_type: varDelta > 0 ? 'RESTOCK' : 'CORRECTION',
+                  quantity_delta: varDelta,
+                  quantity_before: prevVarStock,
+                  quantity_after: vStock,
+                  unit_cost: vCost || null,
+                  reference_type: 'PRODUCT_UPDATE',
+                  note: `Stock updated for variant ${v.variantName.trim()}`,
+                  created_by_name: 'Admin',
                 })
               }
             }
           }
-        }
 
-        setStatusMessage({ type: 'success', text: `Product "${trimmedName}" updated successfully!` })
+          // Update parent product
+          await supabase
+            .from('products')
+            .update({
+              name: trimmedName,
+              name_ta: nameTa.trim() || '',
+              category: categoryName,
+              category_id: categoryId ? Number(categoryId) : 1,
+              price: priceNum,
+              offer_price: priceNum,
+              purchase_price: costNum,
+              low_stock_alert: alertThreshold,
+              barcode: null,
+              description: description.trim() || '',
+              has_variants: true,
+              stock_quantity: totalVariantStock,
+              stock: totalVariantStock,
+            })
+            .eq('id', selectedProductId)
+
+          setStatusMessage({
+            type: 'success',
+            text: `Product "${trimmedName}" updated with ${totalVariantStock} total variant stock units! Ready in POS Catalog.`,
+          })
+        }
       } else {
         // CREATE NEW PRODUCT
-        const alertThreshold = Number(lowStockAlert) > 0 ? Number(lowStockAlert) : 5
-        const { data: newProd, error: insErr } = await supabase
-          .from('products')
-          .insert({
-            name: trimmedName,
-            name_ta: nameTa.trim() || '',
-            category_id: categoryId ? Number(categoryId) : 1,
-            price: priceNum,
-            offer_price: priceNum,
-            purchase_price: costNum,
-            low_stock_alert: alertThreshold,
-            barcode: (!hasVariants && barcode.trim()) ? barcode.trim() : null,
-            description: description.trim() || '',
-            has_variants: hasVariants && variantRows.length > 0,
-            stock_quantity: 0,
-            stock: 0,
-            is_active: true,
+        if (!hasVariants) {
+          const inputStock = Math.max(0, parseInt(stockQuantity) || 0)
+
+          const { data: newProd, error: insErr } = await supabase
+            .from('products')
+            .insert({
+              name: trimmedName,
+              name_ta: nameTa.trim() || '',
+              category: categoryName,
+              category_id: categoryId ? Number(categoryId) : 1,
+              price: priceNum,
+              offer_price: priceNum,
+              purchase_price: costNum,
+              low_stock_alert: alertThreshold,
+              barcode: barcode.trim() || null,
+              description: description.trim() || '',
+              has_variants: false,
+              stock_quantity: inputStock,
+              stock: inputStock,
+              is_active: true,
+            })
+            .select('id, name')
+            .single()
+
+          if (insErr || !newProd) throw insErr || new Error('Failed to create product')
+
+          if (barcode.trim()) {
+            await supabase.from('barcode_registry').upsert(
+              {
+                barcode: barcode.trim(),
+                product_id: newProd.id,
+                variant_id: null,
+                is_active: true,
+              },
+              { onConflict: 'barcode' }
+            )
+          }
+
+          if (inputStock > 0) {
+            await supabase.from('inventory_movements').insert({
+              product_id: newProd.id,
+              variant_id: null,
+              movement_type: 'RESTOCK',
+              quantity_delta: inputStock,
+              quantity_before: 0,
+              quantity_after: inputStock,
+              unit_cost: costNum || null,
+              reference_type: 'PRODUCT_CREATION',
+              note: 'Initial received stock on product creation',
+              created_by_name: 'Admin',
+            })
+          }
+
+          setStatusMessage({
+            type: 'success',
+            text: `Product "${trimmedName}" created with ${inputStock} stock units! Immediately ready in catalog & billing.`,
           })
-          .select('id, name')
-          .single()
-
-        if (insErr || !newProd) throw insErr || new Error('Failed to create product')
-
-        // Process variants if any
-        if (hasVariants && variantRows.length > 0) {
-          for (const v of variantRows) {
+          resetForm()
+        } else {
+          // Multi-variant creation
+          let totalVariantStock = 0
+          variantRows.forEach((v) => {
             if (v.variantName.trim()) {
-              const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
-              const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
-              const vQty = Math.max(0, v.noOfLabels || 0)
+              totalVariantStock += Math.max(0, Number(v.stock) || 0)
+            }
+          })
 
-              const { data: createdVar, error: vErr } = await supabase
-                .from('product_variants')
-                .insert({
+          const { data: newProd, error: insErr } = await supabase
+            .from('products')
+            .insert({
+              name: trimmedName,
+              name_ta: nameTa.trim() || '',
+              category: categoryName,
+              category_id: categoryId ? Number(categoryId) : 1,
+              price: priceNum,
+              offer_price: priceNum,
+              purchase_price: costNum,
+              low_stock_alert: alertThreshold,
+              barcode: null,
+              description: description.trim() || '',
+              has_variants: true,
+              stock_quantity: totalVariantStock,
+              stock: totalVariantStock,
+              is_active: true,
+            })
+            .select('id, name')
+            .single()
+
+          if (insErr || !newProd) throw insErr || new Error('Failed to create product')
+
+          for (const v of variantRows) {
+            if (!v.variantName.trim()) continue
+            const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
+            const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
+            const vStock = Math.max(0, Number(v.stock) || 0)
+
+            const { data: createdVar } = await supabase
+              .from('product_variants')
+              .insert({
+                product_id: newProd.id,
+                variant_name: v.variantName.trim(),
+                size_label: v.sizeLabel?.trim() || v.variantName.trim(),
+                price: vPrice,
+                purchase_price: vCost,
+                stock: vStock,
+                barcode: v.customBarcode?.trim() || null,
+                is_active: true,
+              })
+              .select('id')
+              .single()
+
+            if (createdVar && v.customBarcode?.trim()) {
+              await supabase.from('barcode_registry').upsert(
+                {
+                  barcode: v.customBarcode.trim(),
                   product_id: newProd.id,
-                  variant_name: v.variantName.trim(),
-                  size_label: v.sizeLabel?.trim() || v.variantName.trim(),
-                  price: vPrice,
-                  purchase_price: vCost,
-                  stock: 0,
+                  variant_id: createdVar.id,
                   is_active: true,
-                })
-                .select()
-                .single()
+                },
+                { onConflict: 'barcode' }
+              )
+            }
 
-              if (!vErr && createdVar && vQty > 0) {
-                await supabase.rpc('create_barcode_and_receive_stock', {
-                  p_product_id: newProd.id,
-                  p_variant_id: createdVar.id,
-                  p_quantity_received: vQty,
-                  p_unit_cost: vCost || null,
-                  p_created_by_name: 'Admin',
-                  p_custom_barcode: v.customBarcode?.trim() || null,
-                  p_note: `Initial intake of variant ${v.variantName.trim()}`,
-                })
-              }
+            if (createdVar && vStock > 0) {
+              await supabase.from('inventory_movements').insert({
+                product_id: newProd.id,
+                variant_id: createdVar.id,
+                movement_type: 'RESTOCK',
+                quantity_delta: vStock,
+                quantity_before: 0,
+                quantity_after: vStock,
+                unit_cost: vCost || null,
+                reference_type: 'PRODUCT_CREATION',
+                note: `Initial stock for variant ${v.variantName.trim()}`,
+                created_by_name: 'Admin',
+              })
             }
           }
-        }
 
-        setStatusMessage({ type: 'success', text: `Product "${trimmedName}" created successfully with barcodes!` })
-        resetForm()
+          setStatusMessage({
+            type: 'success',
+            text: `Multi-variant product "${trimmedName}" created with ${totalVariantStock} total units! Immediately ready in catalog & billing.`,
+          })
+          resetForm()
+        }
       }
 
       await fetchProducts()
@@ -389,10 +568,10 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
           <div>
             <h3 className="text-sm font-bold text-black flex items-center gap-2">
               <Package size={16} className="text-[#D4AF37]" />
-              {selectedProductId ? 'Edit Product & SKU Details' : 'Add New Product to Catalog'}
+              {selectedProductId ? 'Edit Product & Stock Details' : 'Add New Product to Catalog'}
             </h3>
             <p className="text-[11px] text-gray-500 font-semibold">
-              Configure pricing, categories, and dynamic variant barcodes
+              Receive stock, configure pricing &amp; categories (Barcode is optional)
             </p>
           </div>
           {selectedProductId && (
@@ -426,8 +605,8 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             {/* Name Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  Product Name (English) <span className="text-red-500">*</span>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
+                  Product Name (English) <span className="text-red-500 ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
@@ -435,20 +614,20 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                   placeholder="e.g. Linen Cotton Shirt"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                  className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  Tamil Name (Optional)
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
+                  Tamil Name <span className="text-gray-400 font-normal ml-1">(Optional)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. காட்டன் சட்டை"
                   value={nameTa}
                   onChange={(e) => setNameTa(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                  className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
                 />
               </div>
             </div>
@@ -456,7 +635,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
             {/* Category, Barcode, and Low Stock Alert */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
                   Category
                 </label>
                 <select
@@ -474,40 +653,40 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                  Base Barcode {!hasVariants ? <span className="text-gray-400 font-normal">(Auto if empty)</span> : <span className="text-amber-700 font-normal">(Variant level)</span>}
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
+                  Barcode <span className="text-gray-400 font-normal ml-1">(Optional)</span>
                 </label>
                 <input
                   type="text"
                   disabled={hasVariants}
-                  placeholder={hasVariants ? 'Variants define their barcodes' : 'e.g. 8901234567890'}
+                  placeholder={hasVariants ? 'Defined at variant level' : 'e.g. 8901234567'}
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A] disabled:bg-gray-100 disabled:text-gray-400"
+                  className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A] disabled:bg-gray-100 disabled:text-gray-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
                   Low Stock Alert Threshold
                 </label>
                 <input
                   type="number"
                   min="1"
-                  placeholder="5 (or 10 based on demand)"
+                  placeholder="5"
                   value={lowStockAlert}
                   onChange={(e) => setLowStockAlert(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                  className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
                 />
               </div>
             </div>
 
-            {/* Base Pricing (only if no variants) */}
+            {/* Base Pricing & Received Stock (only if no variants) */}
             {!hasVariants && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-white border border-gray-200 rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-white border border-gray-200 rounded-xl items-start">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Selling Price (₹) <span className="text-red-500">*</span>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
+                    Selling Price (₹) <span className="text-red-500 ml-0.5">*</span>
                   </label>
                   <input
                     type="number"
@@ -517,12 +696,12 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
                     Purchase / Cost Price (₹)
                   </label>
                   <input
@@ -532,7 +711,22 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                     placeholder="0.00"
                     value={purchasePrice}
                     onChange={(e) => setPurchasePrice(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                    className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-emerald-800 mb-1.5 h-4 flex items-center gap-1">
+                    <Boxes size={13} className="text-emerald-600 shrink-0" />
+                    <span>Received / Current Stock</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    className="w-full h-10 px-3.5 rounded-xl border border-emerald-300 bg-emerald-50/50 text-xs font-bold text-emerald-950 outline-none focus:border-emerald-600 focus:bg-white"
                   />
                 </div>
               </div>
@@ -540,8 +734,8 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
 
             {/* Description */}
             <div>
-              <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                Description / Notes (Optional)
+              <label className="block text-[11px] font-bold text-gray-700 mb-1.5 h-4 flex items-center">
+                Description / Notes <span className="text-gray-400 font-normal ml-1">(Optional)</span>
               </label>
               <textarea
                 rows={2}
@@ -646,16 +840,16 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
-                            Stock Intake
+                          <label className="block text-[10px] font-bold text-emerald-800 mb-0.5">
+                            Received Stock
                           </label>
                           <input
                             type="number"
                             min="0"
-                            placeholder="Qty"
-                            value={v.noOfLabels || ''}
-                            onChange={(e) => handleUpdateVariantRow(v.id, 'noOfLabels', parseInt(e.target.value) || 0)}
-                            className="w-full h-8 px-2.5 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"
+                            placeholder="0"
+                            value={v.stock || ''}
+                            onChange={(e) => handleUpdateVariantRow(v.id, 'stock', parseInt(e.target.value) || 0)}
+                            className="w-full h-8 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50/40 text-xs font-black text-emerald-950 outline-none focus:border-emerald-600"
                           />
                         </div>
 
@@ -665,7 +859,7 @@ export const AddEditProductView: React.FC<{ onStockUpdated?: () => void }> = ({ 
                           </label>
                           <input
                             type="text"
-                            placeholder="Auto"
+                            placeholder="Optional"
                             value={v.customBarcode || ''}
                             onChange={(e) => handleUpdateVariantRow(v.id, 'customBarcode', e.target.value)}
                             className="w-full h-8 px-2.5 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#0A0A0A]"

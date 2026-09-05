@@ -196,7 +196,7 @@ export const InventoryTable: React.FC = () => {
             </button>
           </div>
 
-          {/* Global Receive Stock CTA */}
+          {/* Global Add Barcode CTA */}
           <button
             type="button"
             onClick={() => {
@@ -204,8 +204,9 @@ export const InventoryTable: React.FC = () => {
               setShowReceiveModal(true)
             }}
             className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] border border-[#D4AF37] text-[#D4AF37] text-xs font-black hover:bg-[#1A1A1A] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
+            title="Generate & print barcodes for items"
           >
-            <PackagePlus size={15} /> Receive Stock
+            <Printer size={15} /> Add Barcode
           </button>
         </div>
       ) : (

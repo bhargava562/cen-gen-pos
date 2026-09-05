@@ -20,6 +20,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
     name: '',
     category: '',
     price: '',
+    stock: '0',
     lowStockAlert: '5',
   })
 
@@ -74,24 +75,43 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
       }
 
       const alertThreshold = Number(formData.lowStockAlert) > 0 ? Number(formData.lowStockAlert) : 5
+      const stockNum = Math.max(0, parseInt(formData.stock) || 0)
 
-      // Products initialize with stock = 0. Stock enters through barcode receiving.
-      const { error: dbErr } = await supabase.from('products').insert({
-        name: formData.name.trim(),
-        category: categoryName || 'Apparel',
-        category_id: categoryId,
-        price: Number(formData.price),
-        stock: 0,
-        stock_quantity: 0,
-        low_stock_alert: alertThreshold,
-        is_active: true,
-        unit: '1pc',
-        base_quantity: 1,
-        unit_type: 'unit',
-        unit_label: 'pc'
-      })
+      const { data: newProd, error: dbErr } = await supabase
+        .from('products')
+        .insert({
+          name: formData.name.trim(),
+          category: categoryName || 'Apparel',
+          category_id: categoryId,
+          price: Number(formData.price),
+          stock: stockNum,
+          stock_quantity: stockNum,
+          low_stock_alert: alertThreshold,
+          is_active: true,
+          unit: '1pc',
+          base_quantity: 1,
+          unit_type: 'unit',
+          unit_label: 'pc'
+        })
+        .select('id')
+        .single()
 
       if (dbErr) throw dbErr
+
+      if (newProd && stockNum > 0) {
+        await supabase.from('inventory_movements').insert({
+          product_id: newProd.id,
+          variant_id: null,
+          movement_type: 'RESTOCK',
+          quantity_delta: stockNum,
+          quantity_before: 0,
+          quantity_after: stockNum,
+          reference_type: 'PRODUCT_CREATION',
+          note: 'Initial received stock on product creation',
+          created_by_name: 'Admin',
+        })
+      }
+
       await fetchProducts()
       onSuccess()
       onClose()
@@ -109,7 +129,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
         <div className="flex items-center justify-between p-6 border-b border-[#D4AF37]/30 bg-[#0A0A0A] text-white">
           <div>
             <h2 className="text-lg font-black text-white">Add Product to {BRAND_EN}</h2>
-            <p className="text-xs text-[#D4AF37] font-semibold">Initial stock will be added via Barcode Receiving</p>
+            <p className="text-xs text-[#D4AF37] font-semibold">Instantly available in Catalog &amp; Billing</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white transition-colors cursor-pointer">
             <X size={18} />
@@ -185,26 +205,38 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-gray-700 mb-1.5">
-              Low Stock Alert Limit (Threshold)
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={formData.lowStockAlert}
-              onChange={e => setFormData({...formData, lowStockAlert: e.target.value})}
-              className="w-full px-4 py-2.5 bg-[#FBFAF6] border-2 border-[#E8D399] rounded-xl focus:outline-none focus:border-[#0A0A0A] focus:bg-white text-sm font-bold text-black"
-              placeholder="5 (e.g. 10 or 15 based on demand)"
-            />
-            <p className="text-[10px] text-gray-500 mt-1">
-              Sound and visual alarm triggers when available stock falls to or below this quantity.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-emerald-800 mb-1.5">
+                Received Stock (Qty)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.stock}
+                onChange={e => setFormData({...formData, stock: e.target.value})}
+                className="w-full px-4 py-2.5 bg-emerald-50/40 border-2 border-emerald-300 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white text-sm font-black text-emerald-950"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-700 mb-1.5">
+                Low Stock Alert Limit
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.lowStockAlert}
+                onChange={e => setFormData({...formData, lowStockAlert: e.target.value})}
+                className="w-full px-4 py-2.5 bg-[#FBFAF6] border-2 border-[#E8D399] rounded-xl focus:outline-none focus:border-[#0A0A0A] focus:bg-white text-sm font-bold text-black"
+                placeholder="5"
+              />
+            </div>
           </div>
 
           <div className="bg-[#FBFAF6] border border-[#E8D399] p-3 rounded-xl text-[11px] text-gray-600 flex items-start gap-2">
             <Sparkles size={14} className="text-[#B48811] shrink-0 mt-0.5" />
-            <span>Product will be created with <strong>Stock: 0</strong>. Generate a barcode and receive stock units in the Inventory tab.</span>
+            <span>Product will be immediately ready in POS search and catalog. Barcode generation is optional.</span>
           </div>
 
           <button
